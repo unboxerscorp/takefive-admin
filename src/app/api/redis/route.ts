@@ -77,7 +77,7 @@ function createRedisClient(label: string): Redis {
     return redis;
 }
 
-export const getRedisClient = async (): Promise<Redis> => {
+const getRedisClient = async (): Promise<Redis> => {
     if (!global.sshTunnelServer) {
         await createSshTunnelServer();
     }
