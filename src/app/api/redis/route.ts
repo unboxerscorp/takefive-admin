@@ -14,7 +14,7 @@ if (!global.redisClient) {
     global.redisClient = null;
 }
 
-const SSH_PRIVATE_KEY = process.env.SSH_PRIVATE_KEY;
+const SSH_PRIVATE_KEY = process.env.SSH_PRIVATE_KEY?.replaceAll(/\\n/g, '\n');
 
 async function createSshTunnelServer() {
     const [server, client] = await createTunnel(
@@ -24,7 +24,7 @@ async function createSshTunnelServer() {
             username: 'ubuntu',
             host: '13.209.0.109',
             port: 1022,
-            privateKey: SSH_PRIVATE_KEY ? Buffer.from(SSH_PRIVATE_KEY, 'utf8') : undefined,
+            privateKey: SSH_PRIVATE_KEY ? SSH_PRIVATE_KEY : undefined,
             keepaliveInterval: 1000,
             readyTimeout: 10000,
         },

@@ -29,7 +29,7 @@ export default function OnlineUsers() {
 
     const fetchData = React.useCallback(() => {
         setIsLoading(true);
-        fetch(`http://localhost:3001/api/redis?${new URLSearchParams({ key: "user:*:user_data" }).toString()}`, { method: "GET" }).then(res => res.json()).catch(err => { console.error(err); return { data: {} } }).then(({ data }) => Object.values(data).map((user: any) => flattenObject({ obj: user }))).then((data) => {
+        fetch(`/api/redis?${new URLSearchParams({ key: "user:*:user_data" }).toString()}`, { method: "GET" }).then(res => res.json()).catch(err => { console.error(err); return { data: {} } }).then(({ data }) => Object.values(data).map((user: any) => flattenObject({ obj: user }))).then((data) => {
             console.log(data);
             ReactDOM.flushSync(() => {
                 setIsRefreshActive(false);
