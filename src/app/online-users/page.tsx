@@ -26,6 +26,7 @@ export default function OnlineUsers() {
     const [isLoading, setIsLoading] = React.useState(false);
     const [columns, setColumns] = React.useState<GridColDef[]>([]);
     const [rows, setRows] = React.useState<Record<string, any>[]>([]);
+    const prevRowsRef = React.useRef(rows);
 
     const [isAutoRefreshActive, setIsAutoRefreshActive] = React.useState(false);
     const [countDown, setCountDown] = React.useState<number | null>(null);
@@ -36,7 +37,7 @@ export default function OnlineUsers() {
         fetch(`/api/redis?${new URLSearchParams({ key: "user:*:user_data" }).toString()}`, { method: "GET" }).then(res => res.json()).catch(err => { console.error(err); return { data: {} } }).then(({ data }) => Object.values(data).map((user: any) => flattenObject({ obj: user }))).then((data) => {
             console.log(data);
             ReactDOM.flushSync(() => {
-                setCountDown(10);
+                setCountDown(3);
                 setIsLoading(false);
                 if (!data || data.length === 0) {
                     return;
@@ -51,6 +52,42 @@ export default function OnlineUsers() {
             }),
         );
     }, [apiRef]);
+
+    React.useEffect(() => {
+        navigator.mediaDevices.getUserMedia({ audio: true }).then(() => {
+            const audioContext = window.AudioContext || (window as any).webkitAudioContext;
+            if (audioContext) {
+                const context = new audioContext();
+            } else {
+                console.error('AudioContext is not supported in this browser.');
+            }
+        }).catch(e => {
+            console.error(`Audio permissions denied: ${e}`);
+        });
+    }, []);
+
+    React.useEffect(() => {
+        const addSound = new Audio('/add-sound.mp3');      // 추가 효과음
+        const removeSound = new Audio('/remove-sound.mp3'); // 제거 효과음
+
+        const prevRows = prevRowsRef.current;
+
+        const prevSet = new Set(prevRows.map(item => item.id));
+        const currentSet = new Set(rows.map(item => item.id));
+
+        const addedItems = rows.map(item => item.id).filter(item => !prevSet.has(item));     // 새로 추가된 요소들
+        const removedItems = prevRows.map(item => item.id).filter(item => !currentSet.has(item)); // 삭제된 요소들
+
+        if (addedItems.length > 0 && removedItems.length > 0) {
+            addSound.play();
+        } else if (addedItems.length > 0) {
+            addSound.play();
+        } else if (removedItems.length > 0) {
+            removeSound.play();
+        }
+
+        prevRowsRef.current = rows;
+    }, [rows]);
 
     React.useEffect(() => {
         const handleVisibilityChange = () => {
