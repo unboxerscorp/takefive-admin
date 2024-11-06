@@ -42,7 +42,9 @@ export default function OnlineUsers() {
                     return;
                 }
                 setColumns(Object.keys(data[0]).map((key) => ({ field: key, headerName: key, renderCell: key === "profileImage" ? (params) => <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", width: "100%", height: "100%" }}><Avatar style={{ width: 40, height: 40 }} src={params.value} /></Box> : undefined, align: "center", headerAlign: "center" })));
-                setRows(data);
+                if (data !== rows) {
+                    setRows(data);
+                }
             });
         });
     }, [apiRef]);
@@ -80,13 +82,10 @@ export default function OnlineUsers() {
             removeSound.play();
         }
 
-        if (addedItems.length > 0 || removedItems.length > 0) {
-            apiRef.current.autosizeColumns({
-                includeHeaders: true,
-                includeOutliers: true,
-            })
-        }
-
+        apiRef.current.autosizeColumns({
+            includeHeaders: true,
+            includeOutliers: true,
+        })
         prevRowsRef.current = rows;
     }, [rows]);
 
