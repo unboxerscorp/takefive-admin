@@ -44,15 +44,7 @@ export default function OnlineUsers() {
                 setColumns(Object.keys(data[0]).map((key) => ({ field: key, headerName: key, renderCell: key === "profileImage" ? (params) => <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", width: "100%", height: "100%" }}><Avatar style={{ width: 40, height: 40 }} src={params.value} /></Box> : undefined, align: "center", headerAlign: "center" })));
                 setRows(data);
             });
-        }).then(() => sleep(0)).then(() => {
-            if (!isAutoRefreshActive) {
-                apiRef.current.autosizeColumns({
-                    includeHeaders: true,
-                    includeOutliers: true,
-                })
-            }
-        }
-        );
+        });
     }, [apiRef]);
 
     React.useEffect(() => {
@@ -67,21 +59,6 @@ export default function OnlineUsers() {
             console.error(`Audio permissions denied: ${e}`);
         });
     }, []);
-
-    React.useEffect(() => {
-        if (apiRef.current && isAutoRefreshActive) {
-            const interval = setInterval(() => {
-                apiRef.current.autosizeColumns({
-                    includeHeaders: true,
-                    includeOutliers: true,
-                })
-            }, 30000)
-
-            return () => {
-                clearInterval(interval);
-            }
-        }
-    }, [apiRef.current, isAutoRefreshActive]);
 
     React.useEffect(() => {
         const addSound = new Audio('/add-sound.mp3');      // 추가 효과음
@@ -101,6 +78,13 @@ export default function OnlineUsers() {
             addSound.play();
         } else if (removedItems.length > 0) {
             removeSound.play();
+        }
+
+        if (addedItems.length > 0 || removedItems.length > 0) {
+            apiRef.current.autosizeColumns({
+                includeHeaders: true,
+                includeOutliers: true,
+            })
         }
 
         prevRowsRef.current = rows;
