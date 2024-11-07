@@ -38,6 +38,7 @@ export default function OnlineUsers() {
             ReactDOM.flushSync(() => {
                 setCountDown(3);
                 if (!data || data.length === 0) {
+                    setRows([]);
                     return;
                 }
                 setColumns(Object.keys(data[0]).map((key) => ({ field: key, headerName: key, renderCell: key === "profileImage" ? (params) => <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", width: "100%", height: "100%" }}><Avatar style={{ width: 40, height: 40 }} src={params.value} /></Box> : undefined, align: "center", headerAlign: "center" })));
