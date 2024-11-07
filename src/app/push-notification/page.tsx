@@ -122,7 +122,7 @@ export default function PushNotification() {
             <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <h1 style={{ textAlign: "center", fontWeight: "bold", fontSize: "1.5rem", color: "black" }}>Push Notification</h1>
                 <Box sx={{ display: "flex", alignItems: "center", columnGap: 2 }}>
-                    <span style={{ color: "black", fontWeight: "bold" }} suppressHydrationWarning>최근 DB 업데이트 시간: {new Date(updatedAt ?? 0).toLocaleString("ko-KR")}</span>
+                    <span style={{ color: "black", fontWeight: "bold" }} suppressHydrationWarning>최근 DB 업데이트 시간: {new Date(updatedAt ?? 0).toLocaleString("ko-KR", { timeZone: "Asia/Seoul" })} (KST)</span>
                     <Button onClick={callLambda} sx={{ backgroundColor: "red", color: "white", fontWeight: "bold", "&.Mui-disabled": { backgroundColor: "lightgrey" } }} variant="contained">DB Refresh (필요 시*)</Button>
                 </Box>
             </Box>
