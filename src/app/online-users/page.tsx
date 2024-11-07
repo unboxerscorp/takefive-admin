@@ -78,17 +78,20 @@ export default function OnlineUsers() {
 
         const prevRows = prevRowsRef.current;
 
-        const prevSet = new Set(prevRows.map(item => item.id));
-        const currentSet = new Set(rows.map(item => item.id));
+        const prevSet = new Set(prevRows);
+        const currentSet = new Set(rows);
 
-        const addedItems = rows.map(item => item.id).filter(item => !prevSet.has(item));     // 새로 추가된 요소들
-        const removedItems = prevRows.map(item => item.id).filter(item => !currentSet.has(item)); // 삭제된 요소들
+        const addedItems = rows.filter(item => !prevSet.has(item));     // 새로 추가된 요소들
+        const removedItems = prevRows.filter(item => !currentSet.has(item)); // 삭제된 요소들
 
-        if (addedItems.length > 0 && removedItems.length > 0) {
+        const isIncreased = addedItems.length > 0 && !addedItems.every(item => item.isAdmin);
+        const isDecreased = removedItems.length > 0 && !removedItems.every(item => item.isAdmin);
+
+        if (isIncreased && isDecreased) {
             addSound.play();
-        } else if (addedItems.length > 0) {
+        } else if (isIncreased) {
             addSound.play();
-        } else if (removedItems.length > 0) {
+        } else if (isDecreased) {
             removeSound.play();
         }
 
