@@ -140,8 +140,8 @@ export default function OnlineUsers() {
     React.useEffect(() => {
         if (countDown !== null) {
             if (countDown > 0) {
-                setTimeout(() => setCountDown(countDown - 1), 1000);
-                return;
+                const timeoutId = setTimeout(() => setCountDown(countDown - 1), 1000);
+                return () => clearTimeout(timeoutId);
             }
         }
         if (isAutoRefreshActive) {
