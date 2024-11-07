@@ -3,10 +3,9 @@
 import { Avatar, Box, Button, CircularProgress, FormControlLabel, Switch } from '@mui/material';
 import { DataGrid, GridColDef, useGridApiRef } from '@mui/x-data-grid';
 import React from 'react';
-import ReactDOM from 'react-dom';
 import { setTimeout } from 'timers';
 
-function areSetsEqual(set1: Record<string, any>[], set2: Record<string, any>[]) {
+function areSetsEqual(set1: Record<string, unknown>[], set2: Record<string, unknown>[]) {
     if (set1.length !== set2.length) {
         return false;
     }
@@ -14,7 +13,7 @@ function areSetsEqual(set1: Record<string, any>[], set2: Record<string, any>[]) 
     return [...set1.map(item => item.id)].every(item => set2.map(item => item.id).includes(item));
 }
 
-function flattenObject({ obj, result = {} }: { obj: Record<string, any>, result?: Record<string, any> }) {
+function flattenObject({ obj, result = {} }: { obj: Record<string, unknown> | object, result?: Record<string, unknown> }) {
     for (const [key, value] of Object.entries(obj)) {
         if (typeof value === 'object' && value !== null) {
             if (Array.isArray(value)) {
@@ -33,7 +32,7 @@ export default function OnlineUsers() {
     const apiRef = useGridApiRef();
     const [isLoading, setIsLoading] = React.useState(false);
     const [columns, setColumns] = React.useState<GridColDef[]>([]);
-    const [rows, setRows] = React.useState<Record<string, any>[]>([]);
+    const [rows, setRows] = React.useState<Record<string, unknown>[]>([]);
     const prevRowsRef = React.useRef(rows);
 
     const [isAutoRefreshActive, setIsAutoRefreshActive] = React.useState(false);
@@ -41,7 +40,12 @@ export default function OnlineUsers() {
     const [isVisible, setIsVisible] = React.useState(false);
 
     const fetchData = React.useCallback(() => {
-        fetch(`/api/redis?${new URLSearchParams({ key: "user:*:user_data" }).toString()}`, { method: "GET" }).then(res => res.json()).catch(err => { console.error(err); return { data: {} } }).then(({ data }) => Object.values(data).map((user: any) => flattenObject({ obj: user }))).then((data) => {
+        fetch(`/api/redis?${new URLSearchParams({ key: "user:*:user_data" }).toString()}`, {
+            method: "GET",
+        }).then(res => res.json() as unknown as { data: Record<string, Record<string, unknown>> }).catch(err => {
+            console.error(err);
+            return { data: {} }
+        }).then(({ data }) => Object.values(data).map((user: Record<string, unknown>) => flattenObject({ obj: user }))).then((data) => {
             setCountDown(3);
             if (!areSetsEqual(data, rows)) {
                 if (!data || data.length === 0) {
@@ -54,13 +58,13 @@ export default function OnlineUsers() {
                 console.log("setRows");
             }
         });
-    }, [apiRef, rows]);
+    }, [rows]);
 
     React.useEffect(() => {
         navigator.mediaDevices.getUserMedia({ audio: true }).then(() => {
             const audioContext = window.AudioContext || (window as any).webkitAudioContext;
             if (audioContext) {
-                const context = new audioContext();
+                new audioContext();
             } else {
                 console.error('AudioContext is not supported in this browser.');
             }
@@ -91,9 +95,6 @@ export default function OnlineUsers() {
 
         prevRowsRef.current = rows;
 
-        // if (addedItems.length > 0 || removedItems.length > 0) {
-        // setIsLoading(true);
-
         let outerTimeoutId: NodeJS.Timeout | null = null;
         let innerTimeoutId: NodeJS.Timeout | null = null;
 
@@ -116,7 +117,6 @@ export default function OnlineUsers() {
             if (outerTimeoutId) clearTimeout(outerTimeoutId);
             if (innerTimeoutId) clearTimeout(innerTimeoutId);
         };
-        // }
     }, [rows, apiRef]);
 
     React.useEffect(() => {
@@ -180,10 +180,4 @@ export default function OnlineUsers() {
             />
         </Box>
     );
-}
-
-function sleep(ms: number) {
-    return new Promise((resolve) => {
-        setTimeout(resolve, ms);
-    });
 }

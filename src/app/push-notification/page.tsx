@@ -1,7 +1,6 @@
 "use client"
 
-import { Avatar, Box, Button, Card, CircularProgress, FormControlLabel, Switch, TextField } from '@mui/material';
-import { TextareaAutosize } from '@mui/base/TextareaAutosize';
+import { Box, Button, Card } from '@mui/material';
 import { DataGrid, GridColDef, useGridApiRef } from '@mui/x-data-grid';
 import React from 'react';
 import ReactDOM from 'react-dom';
@@ -62,7 +61,7 @@ export default function PushNotification() {
                     includeOutliers: true,
                 })
             });
-    }, [dataGridRef]);
+    }, [dataGridRef, rows]);
 
     React.useEffect(() => {
         fetchData();

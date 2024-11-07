@@ -1,10 +1,10 @@
 import aws4 from 'aws4';
 import https from 'https';
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 
 const { AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION } = process.env;
 
-export async function POST(req: NextRequest): Promise<NextResponse> {
+export async function POST(): Promise<NextResponse> {
     const url = new URL('https://qyaddtk7jzrbwqlb3e3vrd2hr40vfymm.lambda-url.ap-northeast-2.on.aws/');
 
     const body = JSON.stringify({

@@ -1,8 +1,6 @@
 import { createTunnel } from 'tunnel-ssh';
-import fs from 'fs';
 import Redis from "ioredis";
 import getLogger from '@/misc/logger';
-import path from 'path';
 
 const REDIS_HOST = "takefive-prod-redis-cluster.j5krht.ng.0001.apn2.cache.amazonaws.com"
 const REDIS_PORT = 6379
@@ -17,7 +15,7 @@ if (!global.redisClient) {
 const SSH_PRIVATE_KEY = process.env.SSH_PRIVATE_KEY?.replaceAll(/\\n/g, '\n');
 
 async function createSshTunnelServer() {
-    const [server, client] = await createTunnel(
+    const [server, _] = await createTunnel(
         { autoClose: false },
         { port: 6380 },
         {
@@ -42,14 +40,6 @@ function createRedisClient(label: string): Redis {
         host: "localhost",
         port: 6380,
         retryStrategy: (times) => Math.min(times * 30, 1000),
-        // reconnectOnError(error) {
-        //   const targetErrors = [/READONLY/, /ETIMEDOUT/];
-        //   targetErrors.forEach((targetError) => {
-        //     if (targetError.test(error.message)) {
-        //       return true;
-        //     }
-        //   });
-        // },
     });
 
     const logger = getLogger(label);
