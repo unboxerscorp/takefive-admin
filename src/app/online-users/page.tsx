@@ -33,7 +33,7 @@ export default function OnlineUsers() {
     const [isVisible, setIsVisible] = React.useState(false);
 
     const fetchData = React.useCallback(() => {
-        setIsLoading(true);
+
         fetch(`/api/redis?${new URLSearchParams({ key: "user:*:user_data" }).toString()}`, { method: "GET" }).then(res => res.json()).catch(err => { console.error(err); return { data: {} } }).then(({ data }) => Object.values(data).map((user: any) => flattenObject({ obj: user }))).then((data) => {
             console.log(data);
             ReactDOM.flushSync(() => {
@@ -43,9 +43,8 @@ export default function OnlineUsers() {
                 }
                 setColumns(Object.keys(data[0]).map((key) => ({ field: key, headerName: key, renderCell: key === "profileImage" ? (params) => <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", width: "100%", height: "100%" }}><Avatar style={{ width: 40, height: 40 }} src={params.value} /></Box> : undefined, align: "center", headerAlign: "center" })));
                 if (data !== rows) {
+                    setIsLoading(true);
                     setRows(data);
-                } else {
-                    setIsLoading(false);
                 }
             });
         });
@@ -97,9 +96,11 @@ export default function OnlineUsers() {
                     apiRef.current.autosizeColumns({
                         includeHeaders: true,
                         includeOutliers: true,
-                    }).then(() => {
+                    }).finally(() => {
                         setIsLoading(false);
                     });
+                } else {
+                    setIsLoading(false);
                 }
             }, 200);
         }, 1000);
