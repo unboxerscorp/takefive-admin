@@ -13,7 +13,7 @@ if (!admin.apps.length) {
 }
 
 
-export async function POST(req: NextRequest, res: NextResponse) {
+export async function POST(req: NextRequest, res: NextResponse): Promise<NextResponse> {
     const { pushTokens, title, body } = await req.json();
     console.log({ pushTokens, title, body });
 
