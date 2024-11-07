@@ -3,6 +3,7 @@ import localFont from "next/font/local";
 import "./globals.css";
 import { Box, Divider, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Toolbar } from '@mui/material';
 import ToggleOn from '@mui/icons-material/ToggleOnOutlined';
+import NotificationIcon from '@mui/icons-material/NotificationsOutlined';
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -52,6 +53,14 @@ export default function RootLayout({
                     <ToggleOn sx={{ color: 'yellowgreen' }} />
                   </ListItemIcon>
                   <ListItemText primary="Online Users" />
+                </ListItemButton>
+              </ListItem>
+              <ListItem disablePadding>
+                <ListItemButton href="/push-notification">
+                  <ListItemIcon>
+                    <NotificationIcon sx={{ color: 'orange' }} />
+                  </ListItemIcon>
+                  <ListItemText primary="Push Notification" />
                 </ListItemButton>
               </ListItem>
             </List>

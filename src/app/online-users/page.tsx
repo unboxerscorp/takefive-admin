@@ -23,7 +23,7 @@ function flattenObject({ obj, result = {} }: { obj: Record<string, any>, result?
 
 export default function OnlineUsers() {
     const apiRef = useGridApiRef();
-    // const [isLoading, setIsLoading] = React.useState(false);
+    const [isLoading, setIsLoading] = React.useState(false);
     const [columns, setColumns] = React.useState<GridColDef[]>([]);
     const [rows, setRows] = React.useState<Record<string, any>[]>([]);
     const prevRowsRef = React.useRef(rows);
@@ -33,17 +33,19 @@ export default function OnlineUsers() {
     const [isVisible, setIsVisible] = React.useState(false);
 
     const fetchData = React.useCallback(() => {
+        setIsLoading(true);
         fetch(`/api/redis?${new URLSearchParams({ key: "user:*:user_data" }).toString()}`, { method: "GET" }).then(res => res.json()).catch(err => { console.error(err); return { data: {} } }).then(({ data }) => Object.values(data).map((user: any) => flattenObject({ obj: user }))).then((data) => {
             console.log(data);
             ReactDOM.flushSync(() => {
                 setCountDown(3);
-                // setIsLoading(false);
                 if (!data || data.length === 0) {
                     return;
                 }
                 setColumns(Object.keys(data[0]).map((key) => ({ field: key, headerName: key, renderCell: key === "profileImage" ? (params) => <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", width: "100%", height: "100%" }}><Avatar style={{ width: 40, height: 40 }} src={params.value} /></Box> : undefined, align: "center", headerAlign: "center" })));
                 if (data !== rows) {
                     setRows(data);
+                } else {
+                    setIsLoading(false);
                 }
             });
         });
@@ -82,12 +84,31 @@ export default function OnlineUsers() {
             removeSound.play();
         }
 
-        apiRef.current.autosizeColumns({
-            includeHeaders: true,
-            includeOutliers: true,
-        })
         prevRowsRef.current = rows;
     }, [rows]);
+
+    React.useEffect(() => {
+        let outerTimeoutId: NodeJS.Timeout | null = null;
+        let innerTimeoutId: NodeJS.Timeout | null = null;
+
+        outerTimeoutId = setTimeout(() => {
+            innerTimeoutId = setTimeout(() => {
+                if (apiRef?.current) {
+                    apiRef.current.autosizeColumns({
+                        includeHeaders: true,
+                        includeOutliers: true,
+                    }).then(() => {
+                        setIsLoading(false);
+                    });
+                }
+            }, 200);
+        }, 1000);
+
+        return () => {
+            if (outerTimeoutId) clearTimeout(outerTimeoutId);
+            if (innerTimeoutId) clearTimeout(innerTimeoutId);
+        };
+    }, [rows, apiRef]);
 
     React.useEffect(() => {
         const handleVisibilityChange = () => {
@@ -145,7 +166,8 @@ export default function OnlineUsers() {
                 rows={rows}
                 columns={columns}
                 sx={{ border: 0 }}
-            // loading={isLoading}
+                loading={isLoading}
+
             />
         </Box>
     );

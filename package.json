@@ -11,9 +11,13 @@
   "dependencies": {
     "@emotion/react": "^11.13.3",
     "@emotion/styled": "^11.13.0",
+    "@mui/base": "^5.0.0-beta.61",
     "@mui/icons-material": "^6.1.6",
     "@mui/material": "^6.1.6",
     "@mui/x-data-grid": "^7.22.1",
+    "aws4": "^1.13.2",
+    "firebase": "^11.0.1",
+    "firebase-admin": "^12.7.0",
     "ioredis": "^5.4.1",
     "next": "^15.0.2",
     "react": "^18.3.1",
@@ -22,6 +26,7 @@
     "winston": "^3.16.0"
   },
   "devDependencies": {
+    "@types/aws4": "^1.11.6",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
