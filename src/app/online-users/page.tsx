@@ -53,7 +53,6 @@ export default function OnlineUsers() {
                     setRows([]);
                     return
                 }
-                setColumns(Object.keys(data[0]).map((key) => ({ field: key, headerName: key, renderCell: key === "profileImage" ? (params) => <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", width: "100%", height: "100%" }}><Avatar style={{ width: 40, height: 40 }} src={params.value} /></Box> : undefined, align: "center", headerAlign: "center" })));
                 setRows(data);
                 console.log("setRows");
             }
@@ -102,7 +101,7 @@ export default function OnlineUsers() {
             innerTimeoutId = setTimeout(() => {
                 if (apiRef?.current) {
                     apiRef.current.autosizeColumns({
-                        includeHeaders: true,
+                        // includeHeaders: true,
                         includeOutliers: true,
                     }).finally(() => {
                         setIsLoading(false);
@@ -129,6 +128,28 @@ export default function OnlineUsers() {
         return () => {
             document.removeEventListener('visibilitychange', handleVisibilityChange);
         };
+    }, []);
+
+    React.useEffect(() => {
+        setColumns([
+            { field: "id", headerName: "ID", align: "center", headerAlign: "center" },
+            { field: "nickname", headerName: "Name", align: "center", headerAlign: "center" },
+            { field: "isAdmin", headerName: "Admin", align: "center", headerAlign: "center" },
+            { field: "isBackup", headerName: "Backup", align: "center", headerAlign: "center" },
+            { field: "queueStatus", headerName: "Queue", align: "center", headerAlign: "center" },
+            { field: "sessionStatus", headerName: "Session", align: "center", headerAlign: "center" },
+            {
+                field: "profileImage", headerName: "Profile", align: "center", headerAlign: "center", renderCell: (params) =>
+                    <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", width: "100%", height: "100%" }}><Avatar style={{ width: 40, height: 40 }} src={params.value} /></Box>
+            },
+            { field: "regionCode", headerName: "Region", align: "center", headerAlign: "center" },
+            { field: "languageCode", headerName: "Language", align: "center", headerAlign: "center" },
+            { field: "level", headerName: "Level", align: "center", headerAlign: "center" },
+            {
+                field: "lastMatchedWith", headerName: "Last Match", align: "center", headerAlign: "center", valueGetter: (value) => JSON.parse(value).join(" "), renderCell: (params) => <span style={{ padding: "0.5rem 0" }} >[{params.value}]</span>
+            },
+            { field: "createdAt", headerName: "Created at", align: "center", headerAlign: "center" },
+        ]);
     }, []);
 
     React.useEffect(() => {
@@ -170,14 +191,24 @@ export default function OnlineUsers() {
                     </Box>
                 </Box>
             </Box>
-            <DataGrid
-                apiRef={apiRef}
-                rows={rows}
-                columns={columns}
-                sx={{ border: 0 }}
-                loading={isLoading}
-
-            />
+            <Box sx={{
+                border: "10px solid #cccccc33",
+                borderRadius: "8px",
+                height: "100%",
+                boxSizing: "border-box",
+                overflow: "auto"
+            }}>
+                <DataGrid
+                    apiRef={apiRef}
+                    rows={rows}
+                    columns={columns}
+                    sx={{ border: 0 }}
+                    loading={isLoading}
+                    sortModel={[
+                        { field: "id", sort: "asc" }
+                    ]}
+                />
+            </Box>
         </Box>
     );
 }
