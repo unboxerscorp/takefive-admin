@@ -83,7 +83,7 @@ export default function OnlineUsers() {
 
         prevRowsRef.current = rows;
 
-        if (addedItems.length > 0 && removedItems.length > 0) {
+        if (addedItems.length > 0 || removedItems.length > 0) {
             setIsLoading(true);
 
             let outerTimeoutId: NodeJS.Timeout | null = null;
