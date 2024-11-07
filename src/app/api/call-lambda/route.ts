@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 const { AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION } = process.env;
 
-export async function POST(req: NextRequest) {
+export async function POST(req: NextRequest): Promise<NextResponse> {
     const url = new URL('https://qyaddtk7jzrbwqlb3e3vrd2hr40vfymm.lambda-url.ap-northeast-2.on.aws/');
 
     const body = JSON.stringify({
