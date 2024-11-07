@@ -20,11 +20,13 @@ export default function PushNotification() {
     const [columns, setColumns] = React.useState<GridColDef[]>([]);
     const [rows, setRows] = React.useState<Record<string, any>[]>([]);
     const [updatedAt, setUpdatedAt] = React.useState<number | null>(null);
+    const [isLoading, setIsLoading] = React.useState(false);
 
     const titleRef = React.useRef<HTMLInputElement>(null);
     const messageRef = React.useRef<HTMLTextAreaElement>(null);
 
     const fetchData = React.useCallback(() => {
+        setIsLoading(true);
         fetch(`/api/redis?${new URLSearchParams({ key: "preload_data:push_tokens" }).toString()}`, {
             method: "GET"
         })
@@ -39,6 +41,7 @@ export default function PushNotification() {
                 return value;
             })
             .then((value) => {
+                setIsLoading(false);
                 if (!value) {
                     return;
                 }
@@ -201,6 +204,7 @@ export default function PushNotification() {
                                 }
                             }
                         }}
+                        loading={isLoading}
                     />
                 </Box>
             </Box>
