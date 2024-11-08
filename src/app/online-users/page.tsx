@@ -1,8 +1,9 @@
 "use client"
 
-import { Avatar, Box, Button, CircularProgress, FormControlLabel, Switch } from '@mui/material';
+import { Avatar, Box } from '@mui/material';
 import { DataGrid, GridColDef, useGridApiRef } from '@mui/x-data-grid';
 import React from 'react';
+import { io } from 'socket.io-client';
 import { setTimeout } from 'timers';
 
 function areSetsEqual(set1: Record<string, unknown>[], set2: Record<string, unknown>[]) {
@@ -28,6 +29,8 @@ function flattenObject({ obj, result = {} }: { obj: Record<string, unknown> | ob
     return result;
 }
 
+const socketServerUrl = "http://192.168.1.43:3000"
+
 export default function OnlineUsers() {
     const apiRef = useGridApiRef();
     const [isLoading, setIsLoading] = React.useState(false);
@@ -35,29 +38,47 @@ export default function OnlineUsers() {
     const [rows, setRows] = React.useState<Record<string, unknown>[]>([]);
     const prevRowsRef = React.useRef(rows);
 
-    const [isAutoRefreshActive, setIsAutoRefreshActive] = React.useState(false);
-    const [countDown, setCountDown] = React.useState<number | null>(null);
     const [isVisible, setIsVisible] = React.useState(false);
 
-    const fetchData = React.useCallback(() => {
-        fetch(`/api/redis?${new URLSearchParams({ key: "user:*:user_data" }).toString()}`, {
-            method: "GET",
-        }).then(res => res.json() as unknown as { data: Record<string, Record<string, unknown>> }).catch(err => {
-            console.error(err);
-            return { data: {} }
-        }).then(({ data }) => Object.values(data).map((user: Record<string, unknown>) => flattenObject({ obj: user }))).then((data) => {
-            setCountDown(3);
-            if (!areSetsEqual(data, rows)) {
-                if (!data || data.length === 0) {
-                    setColumns([]);
-                    setRows([]);
-                    return
+    React.useEffect(() => {
+        if (isVisible) {
+            const socket = io(socketServerUrl + "/admin", {
+                auth: {
+                    token: "djsqkrtjwm!1932"
                 }
-                setRows(data);
-                console.log("setRows");
-            }
-        });
-    }, [rows]);
+            });
+
+            socket.on("system", (args) => {
+                if (!args) {
+                    return;
+                }
+
+                const { action, data } = args;
+                switch (action) {
+                    case "sendCurrentUserData":
+                        if (data) {
+                            const { currentUserData } = data;
+                            if (currentUserData) {
+                                if (!areSetsEqual(currentUserData, rows)) {
+                                    if (!data || data.length === 0) {
+                                        setRows([]);
+                                        return
+                                    }
+                                    setRows(currentUserData.map((item: Record<string, unknown>) => flattenObject({ obj: item })));
+                                }
+                            }
+                        }
+                        break;
+                    default:
+                        break;
+                }
+            });
+
+            return () => {
+                socket.disconnect();
+            };
+        }
+    }, [isVisible, rows]);
 
     React.useEffect(() => {
         navigator.mediaDevices.getUserMedia({ audio: true }).then(() => {
@@ -155,44 +176,10 @@ export default function OnlineUsers() {
         ]);
     }, []);
 
-    React.useEffect(() => {
-        if (!isVisible) {
-            setIsAutoRefreshActive(false);
-        }
-    }, [isVisible])
-
-    React.useEffect(() => {
-        if (countDown !== null) {
-            if (countDown > 0) {
-                const timeoutId = setTimeout(() => setCountDown(countDown - 1), 1000);
-                return () => clearTimeout(timeoutId);
-            }
-        }
-        if (isAutoRefreshActive) {
-            fetchData();
-        } else {
-            setCountDown(null);
-        }
-    }, [countDown, isAutoRefreshActive])
-
-    React.useEffect(() => {
-        fetchData();
-    }, [fetchData]);
-
     return (
         <Box sx={{ height: '100%', width: '100%', background: "white", display: "flex", flexDirection: "column", rowGap: 5 }}>
             <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <h1 style={{ textAlign: "center", fontWeight: "bold", fontSize: "1.5rem", color: "black" }}>Online Users</h1>
-                <Box sx={{ display: "flex", alignItems: "center", columnGap: 5 }}>
-                    <FormControlLabel style={{ margin: 0 }} slotProps={{ typography: { color: "black", fontWeight: "bold", fontSize: "0.8rem" } }} control={<Switch checked={isAutoRefreshActive} onChange={(e) => setIsAutoRefreshActive(e.target.checked)} />} label="자동 새로고침" />
-                    <Box sx={{ display: "flex", alignItems: "center", columnGap: 1 }}>
-                        <Box sx={{ display: "flex", alignItems: "center", columnGap: 1, visibility: countDown !== null ? "visible" : "hidden" }}>
-                            <span style={{ color: "lightgrey" }}>{countDown === null ? "00" : countDown > 9 ? countDown : `0${countDown}`}초</span>
-                            <CircularProgress color="inherit" size={20} />
-                        </Box>
-                        <Button onClick={fetchData} sx={{ width: "100px", backgroundColor: "black", color: "white", fontWeight: "bold", "&.Mui-disabled": { backgroundColor: "lightgrey" } }} disabled={countDown !== null || isAutoRefreshActive} variant="outlined">Refresh</Button>
-                    </Box>
-                </Box>
             </Box>
             <Box sx={{
                 border: "10px solid #cccccc33",
