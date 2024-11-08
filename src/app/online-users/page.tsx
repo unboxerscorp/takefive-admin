@@ -29,7 +29,7 @@ function flattenObject({ obj, result = {} }: { obj: Record<string, unknown> | ob
     return result;
 }
 
-const socketServerUrl = "http://192.168.1.43:3000"
+const socketServerUrl = "https://socket.takefive.now"
 
 export default function OnlineUsers() {
     const apiRef = useGridApiRef();
@@ -38,47 +38,46 @@ export default function OnlineUsers() {
     const [rows, setRows] = React.useState<Record<string, unknown>[]>([]);
     const prevRowsRef = React.useRef(rows);
 
-    const [isVisible, setIsVisible] = React.useState(false);
-
     React.useEffect(() => {
-        if (isVisible) {
-            const socket = io(socketServerUrl + "/admin", {
-                auth: {
-                    token: "djsqkrtjwm!1932"
-                }
-            });
+        const socket = io(socketServerUrl + "/admin", {
+            auth: {
+                token: "djsqkrtjwm!1932"
+            }
+        });
 
-            socket.on("system", (args) => {
-                if (!args) {
-                    return;
-                }
+        socket.on("system", (args) => {
+            console.log(args);
+            if (!args) {
+                return;
+            }
 
-                const { action, data } = args;
-                switch (action) {
-                    case "sendCurrentUserData":
-                        if (data) {
-                            const { currentUserData } = data;
-                            if (currentUserData) {
+            const { action, data } = args;
+            switch (action) {
+                case "sendCurrentUserData":
+                    if (data) {
+                        const { currentUserData } = data;
+                        if (currentUserData) {
+                            setRows((rows) => {
                                 if (!areSetsEqual(currentUserData, rows)) {
                                     if (!data || data.length === 0) {
-                                        setRows([]);
-                                        return
+                                        return []
                                     }
-                                    setRows(currentUserData.map((item: Record<string, unknown>) => flattenObject({ obj: item })));
+                                    return currentUserData.map((item: Record<string, unknown>) => flattenObject({ obj: item }));
                                 }
-                            }
+                                return rows
+                            })
                         }
-                        break;
-                    default:
-                        break;
-                }
-            });
+                    }
+                    break;
+                default:
+                    break;
+            }
+        });
 
-            return () => {
-                socket.disconnect();
-            };
-        }
-    }, [isVisible, rows]);
+        return () => {
+            socket.disconnect();
+        };
+    }, []);
 
     React.useEffect(() => {
         navigator.mediaDevices.getUserMedia({ audio: true }).then(() => {
@@ -141,18 +140,6 @@ export default function OnlineUsers() {
             if (innerTimeoutId) clearTimeout(innerTimeoutId);
         };
     }, [rows, apiRef]);
-
-    React.useEffect(() => {
-        const handleVisibilityChange = () => {
-            setIsVisible(!document.hidden);
-        };
-
-        document.addEventListener('visibilitychange', handleVisibilityChange);
-
-        return () => {
-            document.removeEventListener('visibilitychange', handleVisibilityChange);
-        };
-    }, []);
 
     React.useEffect(() => {
         setColumns([
