@@ -37,12 +37,17 @@ export default function OnlineUsers() {
     const [columns, setColumns] = React.useState<GridColDef[]>([]);
     const [rows, setRows] = React.useState<Record<string, unknown>[]>([]);
     const prevRowsRef = React.useRef(rows);
+    const [socketConnected, setSocketConnected] = React.useState(false);
 
     React.useEffect(() => {
         const socket = io(socketServerUrl + "/admin", {
             auth: {
                 token: "djsqkrtjwm!1932"
             }
+        });
+
+        socket.on("connect", () => {
+            setSocketConnected(true);
         });
 
         socket.on("system", (args) => {
@@ -72,6 +77,10 @@ export default function OnlineUsers() {
                 default:
                     break;
             }
+        });
+
+        socket.on("disconnect", () => {
+            setSocketConnected(false);
         });
 
         return () => {
@@ -167,6 +176,10 @@ export default function OnlineUsers() {
         <Box sx={{ height: '100%', width: '100%', background: "white", display: "flex", flexDirection: "column", rowGap: 5 }}>
             <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <h1 style={{ textAlign: "center", fontWeight: "bold", fontSize: "1.5rem", color: "black" }}>Online Users</h1>
+                <span>
+                    {socketConnected ? <span style={{ color: "green" }}>Connected</span> : <span style={{ color: "red" }}>Disconnected</span>}
+                    <StatusDot socketConnected={socketConnected} />
+                </span>
             </Box>
             <Box sx={{
                 border: "10px solid #cccccc33",
@@ -187,5 +200,29 @@ export default function OnlineUsers() {
                 />
             </Box>
         </Box>
+    );
+}
+
+const StatusDot = ({ socketConnected }: { socketConnected: boolean }) => {
+    return (
+        <span style={{
+            animation: "blinker 2s linear infinite",
+            width: "0.7rem",
+            height: "0.7rem",
+            display: "inline-block",
+            backgroundColor: socketConnected ? "green" : "lightgrey",
+            borderRadius: "100%",
+            marginLeft: "0.5rem",
+        }}>
+            <style>
+                {`
+                    @keyframes blinker {
+                        50% {
+                            opacity: 0.3;
+                        }
+                    }
+                `}
+            </style>
+        </span>
     );
 }
