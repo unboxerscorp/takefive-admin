@@ -64,13 +64,91 @@ export default function PushNotification() {
     }, [dataGridRef, rows]);
 
     React.useEffect(() => {
-        fetchData();
+        // fetchData();
     }, [fetchData]);
 
-    const sendPushNotificationToSelected = async () => {
+
+    const sendPushNotificationToSelected = async ({
+        title, message, dryRun,
+    }: {
+        title: string,
+        message: string
+        dryRun: boolean
+    }) => {
+        const userIds: number[] = [];
+
+        dataGridRef.current.getSelectedRows().forEach((row: any) => {
+            const { user_id } = row;
+            userIds.push(user_id);
+        });
+
+        if (userIds.length === 0) {
+            console.error("No users selected");
+            return;
+        }
+
+        return await fetch("https://api.takefive.now/api/admin/push-notification", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                title,
+                body: message,
+                dryRun,
+                userIds,
+            })
+        });
+    }
+
+    const sendPushNotificationToAll = async ({
+        title, message, dryRun,
+    }: {
+        title: string,
+        message: string
+        dryRun: boolean
+    }) => {
+        return await fetch("https://api.takefive.now/api/admin/push-notification-all", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                title,
+                body: message,
+                dryRun,
+            })
+        });
+    }
+
+    const sendPushNotificationToAdmin = async ({
+        title, message, dryRun,
+    }: {
+        title: string,
+        message: string
+        dryRun: boolean
+    }) => {
+        return await fetch("https://api.takefive.now/api/admin/push-notification", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            mode: "no-cors",
+            body: JSON.stringify({
+                title,
+                body: message,
+                dryRun,
+                isAdmin: true,
+            })
+        });
+    }
+
+    const sendPushNotification = async ({ pushType, dryRun }: {
+        pushType: "all" | "selected" | "admin",
+        dryRun: boolean,
+    }) => {
         const title = titleRef.current?.value;
         const message = messageRef.current?.value;
-        const pushTokens: string[] = [];
 
         if (!title) {
             console.error("Title is required");
@@ -81,28 +159,29 @@ export default function PushNotification() {
             return;
         }
 
-        dataGridRef.current.getSelectedRows().forEach((row: any) => {
-            const { token } = row;
-            pushTokens.push(token);
-        });
+        let response: Response | undefined;
 
-        if (pushTokens.length === 0) {
-            console.error("No push tokens selected");
-            return;
+        switch (pushType) {
+            case "all":
+                response = await sendPushNotificationToAll({ title, message, dryRun });
+                break;
+            case "selected":
+                response = await sendPushNotificationToSelected({ title, message, dryRun });
+                break;
+            case "admin":
+                response = await sendPushNotificationToAdmin({ title, message, dryRun });
+                break;
+            default:
+                break;
         }
 
-        for (const chunkedPushTokens of chunkArray(pushTokens, 500)) {
-            await fetch("/api/push-notification", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                    title,
-                    body: message,
-                    pushTokens: chunkedPushTokens
-                })
-            });
+        if (response) {
+            const data = await response.json();
+            if (response.status === 200) {
+                console.log(data);
+            } else {
+                console.error(data);
+            }
         }
     }
 
@@ -125,7 +204,7 @@ export default function PushNotification() {
                 <h1 style={{ textAlign: "center", fontWeight: "bold", fontSize: "1.5rem", color: "black" }}>Push Notification</h1>
                 <Box sx={{ display: "flex", alignItems: "center", columnGap: 2 }}>
                     <span style={{ color: "black", fontWeight: "bold" }} suppressHydrationWarning>최근 DB 업데이트 시간: {new Date(updatedAt ?? 0).toLocaleString("ko-KR", { timeZone: "Asia/Seoul" })} (KST)</span>
-                    <Button onClick={callLambda} sx={{ backgroundColor: "red", color: "white", fontWeight: "bold", "&.Mui-disabled": { backgroundColor: "lightgrey" } }} variant="contained">DB Refresh (필요 시*)</Button>
+                    <Button onClick={callLambda} sx={{ backgroundColor: "red", color: "white", fontWeight: "bold", "&.Mui-disabled": { backgroundColor: "lightgrey" } }} disabled variant="contained">DB Refresh (필요 시*)</Button>
                 </Box>
             </Box>
             <Box sx={{ display: "flex", justifyContent: "space-between", flexGrow: 1, overflow: "hidden", flexDirection: "row", columnGap: 2 }}>
@@ -169,9 +248,17 @@ export default function PushNotification() {
                             }}
                         />
                     </Card>
-                    <Box sx={{ width: "100%", display: "flex", justifyContent: "space-around", alignItems: "center" }}>
-                        <Button variant="contained" sx={{ backgroundColor: "red" }} disabled>Send To All</Button>
-                        <Button variant="contained" sx={{ backgroundColor: "red" }} onClick={sendPushNotificationToSelected}>Send To Selected</Button>
+                    <Box sx={{ display: "flex", flexDirection: "column", rowGap: 2, width: "100%" }}>
+                        <Box sx={{ width: "100%", display: "flex", justifyContent: "space-around", alignItems: "center" }}>
+                            <Button variant="contained" sx={{ backgroundColor: "skyblue" }} onClick={() => sendPushNotification({ pushType: "all", dryRun: true })}>Send To All<br />(Preview)</Button>
+                            <Button variant="contained" sx={{ backgroundColor: "skyblue" }} onClick={() => sendPushNotification({ pushType: "admin", dryRun: true })}>Send To Admin<br />(Preview)</Button>
+                            <Button variant="contained" sx={{ backgroundColor: "skyblue" }} disabled onClick={() => sendPushNotification({ pushType: "selected", dryRun: true })}>Send To Selection<br />(Preview)</Button>
+                        </Box>
+                        <Box sx={{ width: "100%", display: "flex", justifyContent: "space-around", alignItems: "center" }}>
+                            <Button variant="contained" sx={{ backgroundColor: "red" }} onClick={() => sendPushNotification({ pushType: "all", dryRun: false })}>Send To All*</Button>
+                            <Button variant="contained" sx={{ backgroundColor: "red" }} onClick={() => sendPushNotification({ pushType: "admin", dryRun: false })}>Send To Admin*</Button>
+                            <Button variant="contained" sx={{ backgroundColor: "red" }} disabled onClick={() => sendPushNotification({ pushType: "selected", dryRun: false })}>Send To Selection*</Button>
+                        </Box>
                     </Box>
                 </Box>
                 <Box
