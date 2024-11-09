@@ -133,7 +133,6 @@ export default function PushNotification() {
             headers: {
                 "Content-Type": "application/json",
             },
-            mode: "no-cors",
             body: JSON.stringify({
                 title,
                 body: message,
