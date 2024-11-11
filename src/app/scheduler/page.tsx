@@ -1,11 +1,10 @@
 "use client"
 
-import { Box, Button, Card, FormControl, IconButton, InputLabel, MenuItem, Select, TextField } from '@mui/material';
-import { DataGrid, GridColDef, useGridApiRef } from '@mui/x-data-grid';
+import { Box, Button, ButtonGroup, Card, FormControl, IconButton, InputLabel, MenuItem, Select, TextField } from '@mui/material';
+import { DataGrid, GridColDef, GridRenderCellParams, GridRowParams, useGridApiRef } from '@mui/x-data-grid';
 import { Job, RepeatableJob } from 'bullmq';
 import React from 'react';
 import { setTimeout } from 'timers';
-import DeleteIcon from '@mui/icons-material/Delete';
 
 export default function Scheduler() {
     const dataGridRef = useGridApiRef();
@@ -13,14 +12,15 @@ export default function Scheduler() {
     const [columns, setColumns] = React.useState<GridColDef[]>([]);
     const [rows, setRows] = React.useState<Record<string, any>[]>([]);
     const [isLoading, setIsLoading] = React.useState(false);
+    const [dataRefreshedAt, setDataRefreshedAt] = React.useState<number>(0);
 
     const [queueName, setQueueName] = React.useState<"matchingQueue" | "notificationQueue" | "testQueue" | "">("");
     const [triggerType, setTriggerType] = React.useState<"repeat" | "once" | "now" | "">("");
     const [cronPattern, setCronPattern] = React.useState<string>("");
     const [jobName, setJobName] = React.useState<string>("");
     const [message, setMessage] = React.useState<string>("");
-    const [displayMessage, setDisplayMessage] = React.useState<string>("");
     const [jobData, setJobData] = React.useState<any>({});
+    const [selectedJob, setSelectedJob] = React.useState<any>(null);
 
     async function getJobs() {
         await fetch("/api/schedule", {
@@ -29,6 +29,7 @@ export default function Scheduler() {
             const { jobs } = await response.json();
             console.log(jobs)
             setJobs(jobs);
+            setDataRefreshedAt(Date.now());
         });
     }
 
@@ -38,6 +39,7 @@ export default function Scheduler() {
             return;
         }
 
+        setIsLoading(true);
         await fetch("/api/schedule", {
             method: "POST",
             body: JSON.stringify(
@@ -59,19 +61,57 @@ export default function Scheduler() {
                 })
         }).then(async (response) => {
             if (response.ok) {
-                setQueueName("");
-                setTriggerType("");
-                setCronPattern("");
-                setJobName("");
-                setMessage("");
+                resetInput();
                 await getJobs();
             }
+        }).finally(() => {
+            setIsLoading(false);
+        });
+    }
+
+    async function deleteJob({ queueName, key }: { queueName: string, key: string }) {
+        setIsLoading(true);
+        fetch("/api/schedule", {
+            method: "DELETE",
+            body: JSON.stringify({
+                queueName: queueName,
+                jobSchedulerId: key
+            })
+        }).then(async (response) => {
+            await getJobs();
+        }).finally(() => {
+            setIsLoading(false);
         });
     }
 
     React.useEffect(() => {
-        getJobs();
+        setIsLoading(true);
+        getJobs().finally(() => {
+            setIsLoading(false);
+        });
     }, []);
+
+    const resetInput = () => {
+        setSelectedJob(null);
+        setQueueName("");
+        setTriggerType("");
+        setCronPattern("");
+        setJobName("");
+        setMessage("");
+        dataGridRef.current?.selectRow(0, false, true);
+    }
+
+    const getJobData = (params: GridRenderCellParams | GridRowParams) => {
+        const queue = jobs[params.row.queueName];
+        if (queue) {
+            const jobs: Job[] = queue.jobs as Job[];
+            const job = jobs.find((job) => job.repeatJobKey === params.row.key);
+            if (job) {
+                const { jobData } = job.data;
+                return JSON.stringify(jobData, null, 2);
+            }
+        }
+    }
 
     React.useEffect(() => {
         if (Object.values(jobs).length === 0) {
@@ -80,39 +120,12 @@ export default function Scheduler() {
             setColumns([
                 { field: "key", headerName: "Key", align: "center", headerAlign: "center" },
                 { field: "queueName", headerName: "Queue", align: "center", headerAlign: "center" },
-                { field: "JobName", headerName: "Name", align: "center", headerAlign: "center" },
+                { field: "jobName", headerName: "Name", align: "center", headerAlign: "center" },
                 { field: "next", headerName: "Next", align: "center", headerAlign: "center" },
                 { field: "triggerType", headerName: "Trigger", align: "center", headerAlign: "center" },
                 { field: "pattern", headerName: "Cron", align: "center", headerAlign: "center" },
                 {
-                    field: "data", headerName: "Data", align: "center", headerAlign: "center", renderCell: (params) => {
-                        const queue = jobs[params.row.queueName];
-                        if (queue) {
-                            const jobs: Job[] = queue.jobs as Job[];
-                            const job = jobs.find((job) => job.repeatJobKey === params.row.key);
-                            if (job) {
-                                const { jobData } = job.data;
-                                return JSON.stringify(jobData)
-                            }
-                        }
-                    }
-                },
-                {
-                    field: "delete", headerName: "Delete", align: "center", headerAlign: "center", renderCell: (params) => {
-                        return (<IconButton onClick={() => {
-                            fetch("/api/schedule", {
-                                method: "DELETE",
-                                body: JSON.stringify({
-                                    queueName: params.row.queueName,
-                                    jobSchedulerId: params.row.key
-                                })
-                            }).then(async (response) => {
-                                await getJobs();
-                            });
-                        }}>
-                            <DeleteIcon sx={{ color: 'red' }} />
-                        </IconButton>)
-                    }
+                    field: "data", headerName: "Data", align: "center", headerAlign: "center", renderCell: getJobData
                 }
             ]);
         }
@@ -120,9 +133,9 @@ export default function Scheduler() {
         Object.values(jobs).forEach((queueJobs) => {
             queueJobs.schedulers.forEach((scheduler) => {
                 const { key, next, pattern } = scheduler as RepeatableJob;
-                const [queueName, JobName, triggerType] = key.split(":")
+                const [queueName, jobName, triggerType] = key.split(":")
                 newRows.push({
-                    key, queueName, JobName, triggerType, next: next && new Date(next).toLocaleString("ko-KR"), pattern
+                    key, queueName, jobName, triggerType, next: next && new Date(next).toLocaleString("ko-KR"), pattern
                 })
             })
         })
@@ -142,6 +155,7 @@ export default function Scheduler() {
                     }).finally(() => {
                         setIsLoading(false);
                     });
+                    dataGridRef.current.sortColumn("next", "asc");
                 } else {
                     setIsLoading(false);
                 }
@@ -169,6 +183,10 @@ export default function Scheduler() {
         <Box sx={{ height: '100%', width: '100%', background: "white", display: "flex", flexDirection: "column", rowGap: 5 }}>
             <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <h1 style={{ textAlign: "center", fontWeight: "bold", fontSize: "1.5rem", color: "black" }}>Scheduler</h1>
+                <Box sx={{ display: "flex", columnGap: 2, justifyContent: "center", alignItems: "center" }}>
+                    <span style={{ fontWeight: "bold", fontSize: "1rem", color: "black" }}>새로 고침 시간: {new Date(dataRefreshedAt).toLocaleString("ko-KR")}</span>
+                    <Button variant="contained" onClick={getJobs}>Refresh</Button>
+                </Box>
             </Box>
             <Box sx={{ display: "flex", justifyContent: "space-between", flexGrow: 1, overflow: "hidden", flexDirection: "row", columnGap: 2 }}>
                 <Box
@@ -189,7 +207,7 @@ export default function Scheduler() {
                         overflow: "auto"
                     }}
                 >
-                    <Card sx={{ background: "lightblue", display: "flex", flexDirection: "column", rowGap: 3, padding: 5, width: "100%", height: "100%", textAlign: "center", justifyContent: "center", alignItems: "center" }} elevation={3}>
+                    <Card sx={{ background: selectedJob ? "sandybrown" : "lightblue", display: "flex", flexDirection: "column", rowGap: 3, padding: 5, width: "100%", height: "100%", textAlign: "center", justifyContent: "center", alignItems: "center" }} elevation={3}>
                         {/* <span style={{ color: "white", fontWeight: "bold", fontSize: "1.5rem" }}>알림 내용을 입력해주세요</span> */}
                         <FormControl fullWidth>
                             <InputLabel id="queue-select-label">Queue</InputLabel>
@@ -197,6 +215,7 @@ export default function Scheduler() {
                                 labelId='queue-select-label'
                                 id='queue-select'
                                 label="Queue"
+                                disabled={selectedJob ? true : false}
                                 onChange={(e) => {
                                     setQueueName(e.target.value as "matchingQueue" | "notificationQueue" | "testQueue");
                                 }}
@@ -208,12 +227,16 @@ export default function Scheduler() {
                                 <MenuItem value="testQueue">testQueue</MenuItem>
                             </Select>
                         </FormControl>
+                        <TextField label="Job Name" fullWidth onChange={(e) => {
+                            setJobName(e.target.value);
+                        }} value={jobName} disabled={selectedJob ? true : false} sx={{ backgroundColor: "white", color: "black" }} />
                         <FormControl fullWidth>
                             <InputLabel id="trigger-type-select-label">Trigger Type</InputLabel>
                             <Select
                                 labelId='trigger-type-label'
                                 id='trigger-type'
                                 label="Trigger Type"
+                                disabled={selectedJob ? true : false}
                                 onChange={(e) => {
                                     if (e.target.value !== "repeat") {
                                         setCronPattern("");
@@ -231,9 +254,6 @@ export default function Scheduler() {
                         {triggerType === "repeat" && <TextField fullWidth label="Cron Pattern" onChange={(e) => {
                             setCronPattern(e.target.value);
                         }} value={cronPattern} placeholder='* * * * * *' sx={{ backgroundColor: "white", color: "black" }} />}
-                        <TextField label="Job Name" fullWidth onChange={(e) => {
-                            setJobName(e.target.value);
-                        }} value={jobName} sx={{ backgroundColor: "white", color: "black" }} />
                         <textarea
                             onChange={(e) => {
                                 setMessage(e.target.value);
@@ -244,7 +264,11 @@ export default function Scheduler() {
                             }}
                             value={message}
                         />
-                        <Button variant="contained" onClick={addJob}>Add Job</Button>
+                        <ButtonGroup variant="contained" aria-label="Basic button group">
+                            <Button sx={{ backgroundColor: "gold" }} onClick={resetInput}>Reset Input</Button>
+                            <Button sx={{ backgroundColor: selectedJob ? "orange" : "blue" }} onClick={addJob}>{selectedJob ? "Update Job" : "Add Job"}</Button>
+                            {selectedJob && <Button sx={{ backgroundColor: "red" }} onClick={() => deleteJob({ queueName: queueName, key: selectedJob.key })}>Delete Job</Button>}
+                        </ButtonGroup>
                     </Card>
                 </Box>
                 <Box
@@ -274,6 +298,23 @@ export default function Scheduler() {
                                     key: false,
                                 },
                             },
+                            sorting: {
+                                sortModel: [
+                                    {
+                                        field: "next",
+                                        sort: "asc",
+                                    },
+                                ],
+                            }
+                        }}
+                        onRowClick={(row) => {
+                            setSelectedJob(row.row);
+                            setQueueName(row.row.queueName);
+                            setTriggerType(row.row.triggerType);
+                            setCronPattern(row.row.pattern);
+                            setJobName(row.row.jobName);
+                            const message = getJobData(row);
+                            setMessage(message ? message : "");
                         }}
                     />
                 </Box>

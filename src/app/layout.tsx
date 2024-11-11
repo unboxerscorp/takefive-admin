@@ -5,6 +5,8 @@ import { Box, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText
 import ToggleOn from '@mui/icons-material/ToggleOnOutlined';
 import NotificationIcon from '@mui/icons-material/NotificationsOutlined';
 import ScheduleIcon from '@mui/icons-material/ScheduleOutlined';
+import BullIcon from '@mui/icons-material/AdsClick';
+import { headers } from "next/headers";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -24,11 +26,14 @@ export const metadata: Metadata = {
 
 const drawerWidth = 240;
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const requestHeaders = await headers();
+  const pathName = requestHeaders.get("x-pathname") || "/";
+  console.log(pathName)
   return (
     <html lang="en">
       <body
@@ -72,11 +77,19 @@ export default function RootLayout({
                   <ListItemText primary="Scheduler" />
                 </ListItemButton>
               </ListItem>
+              <ListItem disablePadding>
+                <ListItemButton href="/bullboard">
+                  <ListItemIcon>
+                    <BullIcon sx={{ color: 'red' }} />
+                  </ListItemIcon>
+                  <ListItemText primary="Bull Board" />
+                </ListItemButton>
+              </ListItem>
             </List>
           </Drawer>
           <Box
             component="main"
-            sx={{ flexGrow: 1, bgcolor: 'background.default', p: 10, width: `calc(100% - ${drawerWidth}px)`, height: '100vh' }}
+            sx={{ flexGrow: 1, bgcolor: 'background.default', p: ["/bullboard"].includes(pathName) ? 0 : 8, width: `calc(100% - ${drawerWidth}px)`, height: '100vh' }}
           >
             {children}
           </Box>

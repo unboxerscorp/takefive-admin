@@ -69,11 +69,11 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
                 }
                 await queue.upsertJobScheduler(jobId, { every: delay, endDate: Date.now() + delay }, {
                     name: jobName,
-                    data: requestData,
+                    data: jobData,
                 });
                 break;
             case "now":
-                await queue.add(jobName, requestData, { jobId });
+                await queue.add(jobName, jobData, { jobId });
                 break;
         }
         return NextResponse.json(
