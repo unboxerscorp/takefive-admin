@@ -14,10 +14,10 @@ if (!global.redisClient) {
 
 const SSH_PRIVATE_KEY = process.env.SSH_PRIVATE_KEY?.replaceAll(/\\n/g, '\n');
 
-async function createSshTunnelServer() {
+async function createSshTunnelServer({ port }: { port: number }) {
     const [server, _] = await createTunnel(
         { autoClose: false },
-        { port: 6380 },
+        { port: port },
         {
             username: 'ubuntu',
             host: '13.209.0.109',
@@ -35,10 +35,10 @@ async function createSshTunnelServer() {
     global.sshTunnelServer = server;
 }
 
-function createRedisClient(label: string): Redis {
+function createRedisClient({ label, port }: { label: string, port: number }): Redis {
     const redis = new Redis({
         host: "localhost",
-        port: 6380,
+        port: port,
         retryStrategy: (times) => Math.min(times * 30, 1000),
     });
 
@@ -68,11 +68,16 @@ function createRedisClient(label: string): Redis {
 }
 
 export const getRedisClient = async (): Promise<Redis> => {
+    const randomPort = Math.floor(Math.random() * 10000) + 30000;
     if (!global.sshTunnelServer) {
-        await createSshTunnelServer();
+        try {
+            await createSshTunnelServer({ port: randomPort });
+        } catch (error) {
+            console.error("Error creating SSH tunnel server:", error);
+        }
     }
     if (!global.redisClient) {
-        global.redisClient = createRedisClient("takefive-redis");
+        global.redisClient = createRedisClient({ label: "takefive-redis", port: randomPort });
     }
     return global.redisClient;
 }
