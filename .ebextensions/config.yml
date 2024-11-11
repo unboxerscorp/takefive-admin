@@ -1,0 +1,9 @@
+option_settings:
+  aws:elasticbeanstalk:container:nodejs:
+    NodeCommand: "npm start"
+
+container_commands:
+  01_npm_install:
+    command: "npm install"
+  02_next_build:
+    command: "npm run build"

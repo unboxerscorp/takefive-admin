@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start",
+    "start": "next start -p 8080",
     "lint": "next lint"
   },
   "dependencies": {
@@ -16,6 +16,7 @@
     "@mui/material": "^6.1.6",
     "@mui/x-data-grid": "^7.22.1",
     "aws4": "^1.13.2",
+    "bullmq": "^5.25.4",
     "firebase": "^11.0.1",
     "firebase-admin": "^12.7.0",
     "ioredis": "^5.4.1",
