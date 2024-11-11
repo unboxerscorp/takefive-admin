@@ -4,6 +4,7 @@ import "./globals.css";
 import { Box, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText } from '@mui/material';
 import ToggleOn from '@mui/icons-material/ToggleOnOutlined';
 import NotificationIcon from '@mui/icons-material/NotificationsOutlined';
+import ScheduleIcon from '@mui/icons-material/ScheduleOutlined';
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -61,6 +62,14 @@ export default function RootLayout({
                     <NotificationIcon sx={{ color: 'orange' }} />
                   </ListItemIcon>
                   <ListItemText primary="Push Notification" />
+                </ListItemButton>
+              </ListItem>
+              <ListItem disablePadding>
+                <ListItemButton href="/scheduler">
+                  <ListItemIcon>
+                    <ScheduleIcon sx={{ color: 'red' }} />
+                  </ListItemIcon>
+                  <ListItemText primary="Scheduler" />
                 </ListItemButton>
               </ListItem>
             </List>

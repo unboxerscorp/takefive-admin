@@ -165,6 +165,7 @@ export default function OnlineUsers() {
             { field: "regionCode", headerName: "Region", align: "center", headerAlign: "center" },
             { field: "languageCode", headerName: "Language", align: "center", headerAlign: "center" },
             { field: "level", headerName: "Level", align: "center", headerAlign: "center" },
+            { field: "gender", headerName: "Gender", align: "center", headerAlign: "center" },
             {
                 field: "lastMatchedWith", headerName: "Last Match", align: "center", headerAlign: "center", valueGetter: (value) => JSON.parse(value).join(" "), renderCell: (params) => <span style={{ padding: "0.5rem 0" }} >[{params.value}]</span>
             },

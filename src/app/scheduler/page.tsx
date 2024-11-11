@@ -1,0 +1,289 @@
+"use client"
+
+import { Box, Button, Card, FormControl, IconButton, InputLabel, MenuItem, Select, TextField } from '@mui/material';
+import { DataGrid, GridColDef, useGridApiRef } from '@mui/x-data-grid';
+import { Job, RepeatableJob } from 'bullmq';
+import React from 'react';
+import { setTimeout } from 'timers';
+import DeleteIcon from '@mui/icons-material/Delete';
+
+export default function Scheduler() {
+    const dataGridRef = useGridApiRef();
+    const [jobs, setJobs] = React.useState<Record<string, Record<string, Job[] | RepeatableJob[]>>>({});
+    const [columns, setColumns] = React.useState<GridColDef[]>([]);
+    const [rows, setRows] = React.useState<Record<string, any>[]>([]);
+    const [isLoading, setIsLoading] = React.useState(false);
+
+    const [queueName, setQueueName] = React.useState<"matchingQueue" | "notificationQueue" | "testQueue" | "">("");
+    const [triggerType, setTriggerType] = React.useState<"repeat" | "once" | "now" | "">("");
+    const [cronPattern, setCronPattern] = React.useState<string>("");
+    const [jobName, setJobName] = React.useState<string>("");
+    const [message, setMessage] = React.useState<string>("");
+    const [displayMessage, setDisplayMessage] = React.useState<string>("");
+    const [jobData, setJobData] = React.useState<any>({});
+
+    async function getJobs() {
+        await fetch("/api/schedule", {
+            method: "GET",
+        }).then(async (response) => {
+            const { jobs } = await response.json();
+            console.log(jobs)
+            setJobs(jobs);
+        });
+    }
+
+    async function addJob() {
+        if (!queueName || !jobName || !jobData) {
+            console.error(`Missing required fields: queueName, jobName, and jobData`);
+            return;
+        }
+
+        await fetch("/api/schedule", {
+            method: "POST",
+            body: JSON.stringify(
+                triggerType === "repeat" ? {
+                    queueName,
+                    jobName,
+                    jobData,
+                    trigger: {
+                        type: "repeat",
+                        data: cronPattern
+                    }
+                } : {
+                    queueName,
+                    jobName,
+                    jobData,
+                    trigger: {
+                        type: "now"
+                    }
+                })
+        }).then(async (response) => {
+            if (response.ok) {
+                setQueueName("");
+                setTriggerType("");
+                setCronPattern("");
+                setJobName("");
+                setMessage("");
+                await getJobs();
+            }
+        });
+    }
+
+    React.useEffect(() => {
+        getJobs();
+    }, []);
+
+    React.useEffect(() => {
+        if (Object.values(jobs).length === 0) {
+            setColumns([]);
+        } else {
+            setColumns([
+                { field: "key", headerName: "Key", align: "center", headerAlign: "center" },
+                { field: "queueName", headerName: "Queue", align: "center", headerAlign: "center" },
+                { field: "JobName", headerName: "Name", align: "center", headerAlign: "center" },
+                { field: "next", headerName: "Next", align: "center", headerAlign: "center" },
+                { field: "triggerType", headerName: "Trigger", align: "center", headerAlign: "center" },
+                { field: "pattern", headerName: "Cron", align: "center", headerAlign: "center" },
+                {
+                    field: "data", headerName: "Data", align: "center", headerAlign: "center", renderCell: (params) => {
+                        const queue = jobs[params.row.queueName];
+                        if (queue) {
+                            const jobs: Job[] = queue.jobs as Job[];
+                            const job = jobs.find((job) => job.repeatJobKey === params.row.key);
+                            if (job) {
+                                const { jobData } = job.data;
+                                return JSON.stringify(jobData)
+                            }
+                        }
+                    }
+                },
+                {
+                    field: "delete", headerName: "Delete", align: "center", headerAlign: "center", renderCell: (params) => {
+                        return (<IconButton onClick={() => {
+                            fetch("/api/schedule", {
+                                method: "DELETE",
+                                body: JSON.stringify({
+                                    queueName: params.row.queueName,
+                                    jobSchedulerId: params.row.key
+                                })
+                            }).then(async (response) => {
+                                await getJobs();
+                            });
+                        }}>
+                            <DeleteIcon sx={{ color: 'red' }} />
+                        </IconButton>)
+                    }
+                }
+            ]);
+        }
+        const newRows: Record<string, any>[] = []
+        Object.values(jobs).forEach((queueJobs) => {
+            queueJobs.schedulers.forEach((scheduler) => {
+                const { key, next, pattern } = scheduler as RepeatableJob;
+                const [queueName, JobName, triggerType] = key.split(":")
+                newRows.push({
+                    key, queueName, JobName, triggerType, next: next && new Date(next).toLocaleString("ko-KR"), pattern
+                })
+            })
+        })
+        setRows(newRows);
+    }, [jobs]);
+
+    React.useEffect(() => {
+        let outerTimeoutId: NodeJS.Timeout | null = null;
+        let innerTimeoutId: NodeJS.Timeout | null = null;
+
+        outerTimeoutId = setTimeout(() => {
+            innerTimeoutId = setTimeout(() => {
+                if (dataGridRef?.current) {
+                    dataGridRef.current.autosizeColumns({
+                        // includeHeaders: true,
+                        includeOutliers: true,
+                    }).finally(() => {
+                        setIsLoading(false);
+                    });
+                } else {
+                    setIsLoading(false);
+                }
+            }, 200);
+        }, 1000);
+
+        return () => {
+            if (outerTimeoutId) clearTimeout(outerTimeoutId);
+            if (innerTimeoutId) clearTimeout(innerTimeoutId);
+        };
+    }, [rows, dataGridRef]);
+
+    React.useEffect(() => {
+        if (message) {
+            try {
+                const messageJson = JSON.parse(message);
+                setJobData(messageJson);
+            } catch (error) {
+                setJobData(null);
+            }
+        }
+    }, [message])
+
+    return (
+        <Box sx={{ height: '100%', width: '100%', background: "white", display: "flex", flexDirection: "column", rowGap: 5 }}>
+            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <h1 style={{ textAlign: "center", fontWeight: "bold", fontSize: "1.5rem", color: "black" }}>Scheduler</h1>
+            </Box>
+            <Box sx={{ display: "flex", justifyContent: "space-between", flexGrow: 1, overflow: "hidden", flexDirection: "row", columnGap: 2 }}>
+                <Box
+                    flex={3}
+                    display="flex"
+                    alignItems="center"
+                    justifyContent="center"
+                    flexDirection="column"
+                    rowGap={5}
+                    px={10}
+                    sx={{
+                        border: "10px solid #cccccc33",
+                        borderRadius: "8px",
+                        padding: "32px",
+                        width: "100%",
+                        height: "100%",
+                        boxSizing: "border-box",
+                        overflow: "auto"
+                    }}
+                >
+                    <Card sx={{ background: "lightblue", display: "flex", flexDirection: "column", rowGap: 3, padding: 5, width: "100%", height: "100%", textAlign: "center", justifyContent: "center", alignItems: "center" }} elevation={3}>
+                        {/* <span style={{ color: "white", fontWeight: "bold", fontSize: "1.5rem" }}>알림 내용을 입력해주세요</span> */}
+                        <FormControl fullWidth>
+                            <InputLabel id="queue-select-label">Queue</InputLabel>
+                            <Select
+                                labelId='queue-select-label'
+                                id='queue-select'
+                                label="Queue"
+                                onChange={(e) => {
+                                    setQueueName(e.target.value as "matchingQueue" | "notificationQueue" | "testQueue");
+                                }}
+                                value={queueName}
+                                sx={{ backgroundColor: "white", color: "black" }}
+                            >
+                                <MenuItem value="matchingQueue">matchingQueue</MenuItem>
+                                <MenuItem value="notificationQueue">notificationQueue</MenuItem>
+                                <MenuItem value="testQueue">testQueue</MenuItem>
+                            </Select>
+                        </FormControl>
+                        <FormControl fullWidth>
+                            <InputLabel id="trigger-type-select-label">Trigger Type</InputLabel>
+                            <Select
+                                labelId='trigger-type-label'
+                                id='trigger-type'
+                                label="Trigger Type"
+                                onChange={(e) => {
+                                    if (e.target.value !== "repeat") {
+                                        setCronPattern("");
+                                    }
+                                    setTriggerType(e.target.value as "repeat" | "once" | "now");
+                                }}
+                                value={triggerType}
+                                sx={{ backgroundColor: "white", color: "black" }}
+                            >
+                                <MenuItem value="repeat">repeat</MenuItem>
+                                {/* <MenuItem value="once">once</MenuItem> */}
+                                <MenuItem value="now">now</MenuItem>
+                            </Select>
+                        </FormControl>
+                        {triggerType === "repeat" && <TextField fullWidth label="Cron Pattern" onChange={(e) => {
+                            setCronPattern(e.target.value);
+                        }} value={cronPattern} placeholder='* * * * * *' sx={{ backgroundColor: "white", color: "black" }} />}
+                        <TextField label="Job Name" fullWidth onChange={(e) => {
+                            setJobName(e.target.value);
+                        }} value={jobName} sx={{ backgroundColor: "white", color: "black" }} />
+                        <textarea
+                            onChange={(e) => {
+                                setMessage(e.target.value);
+                            }}
+                            id="outlined-required"
+                            style={{
+                                width: "100%", height: "100%", resize: "none", border: "1px solid #ccc", borderRadius: "4px", padding: "8px", boxSizing: "border-box"
+                            }}
+                            value={message}
+                        />
+                        <Button variant="contained" onClick={addJob}>Add Job</Button>
+                    </Card>
+                </Box>
+                <Box
+                    flex={4}
+                    display="flex"
+                    alignItems="center"
+                    justifyContent="center"
+                    sx={{
+                        border: "10px solid #cccccc33",
+                        borderRadius: "8px",
+                        width: "100%",
+                        height: "100%",
+                        boxSizing: "border-box",
+                        overflowY: "auto"
+                    }}
+                >
+                    <DataGrid
+                        apiRef={dataGridRef}
+                        rows={rows}
+                        columns={columns}
+                        sx={{ border: 0 }}
+                        loading={isLoading}
+                        getRowId={(row) => row.key}
+                        initialState={{
+                            columns: {
+                                columnVisibilityModel: {
+                                    key: false,
+                                },
+                            },
+                        }}
+                    />
+                </Box>
+            </Box>
+        </Box >
+    );
+}
+
+function sleep(ms: number) {
+    return new Promise((resolve) => {
+        setTimeout(resolve, ms);
+    });
+}
