@@ -6,6 +6,21 @@ import React from 'react';
 import { io } from 'socket.io-client';
 import { setTimeout } from 'timers';
 
+function stringToHexColor(str: string | null): string {
+    const toHexColor = () => {
+        if (!str) {
+            return '#000000';
+        }
+        let hash = 0;
+        for (let i = 0; i < str.length; i++) {
+            hash = str.charCodeAt(i) + ((hash << 5) - hash);
+        }
+        const color = (hash & 0xFFFFFF).toString(16).padStart(6, '0');
+        return `#${color}`;
+    }
+    return toHexColor() + "40";
+}
+
 function areSetsEqual(set1: Record<string, unknown>[], set2: Record<string, unknown>[]) {
     if (set1.length !== set2.length) {
         return false;
@@ -20,7 +35,7 @@ function flattenObject({ obj, result = {} }: { obj: Record<string, unknown> | ob
             if (Array.isArray(value)) {
                 result[key] = JSON.stringify(value);
             } else {
-                flattenObject({ obj: value, result });
+                flattenObject({ obj: Object.fromEntries(Object.entries(value).map(([value_key, value]) => [`${key}_${value_key}`, value])), result });
             }
         } else {
             result[key] = `${value}`;
@@ -29,7 +44,8 @@ function flattenObject({ obj, result = {} }: { obj: Record<string, unknown> | ob
     return result;
 }
 
-const socketServerUrl = "https://socket.takefive.now"
+// const socketServerUrl = "https://socket.takefive.now"
+const socketServerUrl = "http://192.168.1.43:3000"
 
 export default function OnlineUsers() {
     const dataGridRef = useGridApiRef();
@@ -38,6 +54,8 @@ export default function OnlineUsers() {
     const [rows, setRows] = React.useState<Record<string, unknown>[]>([]);
     const prevRowsRef = React.useRef(rows);
     const [socketConnected, setSocketConnected] = React.useState(false);
+    const [currentTime, setCurrentTime] = React.useState(new Date());
+
 
     React.useEffect(() => {
         const socket = io(socketServerUrl + "/admin", {
@@ -67,7 +85,9 @@ export default function OnlineUsers() {
                                     if (!data || data.length === 0) {
                                         return []
                                     }
-                                    return currentUserData.map((item: Record<string, any>) => flattenObject({ obj: item })).map((item: Record<string, any>) => ({ ...item, id: +item.id }));
+                                    const newRows = currentUserData.map((item: Record<string, any>) => flattenObject({ obj: item })).map((item: Record<string, any>) => ({ ...item, id: +item.user_id }))
+                                    console.log(newRows)
+                                    return newRows;
                                 }
                                 return rows
                             })
@@ -107,11 +127,11 @@ export default function OnlineUsers() {
 
         const prevRows = prevRowsRef.current;
 
-        const prevSet = new Set(prevRows);
-        const currentSet = new Set(rows);
+        const prevSet = new Set(prevRows.map(item => item.id));
+        const currentSet = new Set(rows.map(item => item.id));
 
-        const addedItems = rows.filter(item => !prevSet.has(item));     // 새로 추가된 요소들
-        const removedItems = prevRows.filter(item => !currentSet.has(item)); // 삭제된 요소들
+        const addedItems = rows.filter(item => !prevSet.has(item.id));     // 새로 추가된 요소들
+        const removedItems = prevRows.filter(item => !currentSet.has(item.id)); // 삭제된 요소들
 
         const isIncreased = addedItems.length > 0 && !addedItems.every(item => item.isAdmin);
         const isDecreased = removedItems.length > 0 && !removedItems.every(item => item.isAdmin);
@@ -129,23 +149,26 @@ export default function OnlineUsers() {
         if (rows.length > 0) {
             setColumns([
                 { field: "id", headerName: "ID", align: "center", headerAlign: "center" },
-                { field: "nickname", headerName: "Name", align: "center", headerAlign: "center" },
-                { field: "isAdmin", headerName: "Admin", align: "center", headerAlign: "center" },
-                { field: "isBackup", headerName: "Backup", align: "center", headerAlign: "center" },
-                { field: "queueStatus", headerName: "Queue", align: "center", headerAlign: "center" },
-                { field: "sessionStatus", headerName: "Session", align: "center", headerAlign: "center" },
+                { field: "user_preference_nickname", headerName: "Name", align: "center", headerAlign: "center" },
+                { field: "user_isAdmin", headerName: "Admin", align: "center", headerAlign: "center", renderCell: (params) => <span style={{ backgroundColor: params.value === "false" ? "gold" : "white", padding: "0.5rem" }} >{params.value}</span> },
+                { field: "userStatus_queueStatus", headerName: "Queue", align: "center", headerAlign: "center" },
+                { field: "userStatus_sessionStatus", headerName: "Session", align: "center", headerAlign: "center", renderCell: (params) => <span style={{ color: params.row.user_isAdmin === "false" ? params.value === "waiting" ? "red" : params.value === "idle" ? "orange" : "black" : "gray" }} >{params.value}</span> },
                 {
-                    field: "profileImage", headerName: "Profile", align: "center", headerAlign: "center", renderCell: (params) =>
+                    field: "user_preference_profileImage", headerName: "Profile", align: "center", headerAlign: "center", renderCell: (params) =>
                         <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", width: "100%", height: "100%" }}><Avatar style={{ width: 40, height: 40 }} src={params.value} /></Box>
                 },
-                { field: "regionCode", headerName: "Region", align: "center", headerAlign: "center" },
-                { field: "languageCode", headerName: "Language", align: "center", headerAlign: "center" },
-                { field: "level", headerName: "Level", align: "center", headerAlign: "center" },
-                { field: "gender", headerName: "Gender", align: "center", headerAlign: "center" },
+                { field: "user_preference_regionCode", headerName: "Region", align: "center", headerAlign: "center" },
+                { field: "user_preference_languageCode", headerName: "Language", align: "center", headerAlign: "center" },
+                { field: "user_preference_level", headerName: "Level", align: "center", headerAlign: "center" },
+                { field: "user_preference_gender", headerName: "Gender", align: "center", headerAlign: "center" },
                 {
-                    field: "lastMatchedWith", headerName: "Last Match", align: "center", headerAlign: "center", valueGetter: (value) => JSON.parse(value).join(" "), renderCell: (params) => <span style={{ padding: "0.5rem 0" }} >[{params.value}]</span>
+                    field: "user_lastMatchedWith", headerName: "Last Match", align: "center", headerAlign: "center", valueGetter: (value) => JSON.parse(value).join(" "), renderCell: (params) => <span style={{ padding: "0.5rem" }} >[{params.value}]</span>
                 },
-                { field: "createdAt", headerName: "Created at", align: "center", headerAlign: "center" },
+                { field: "userStatus_sessionInfo_batchId", headerName: "Batch", align: "center", headerAlign: "center", renderCell: (params) => <span style={{ padding: "0.5rem", backgroundColor: stringToHexColor(params.value) }} >{params.value ? params.value : "-"}</span> },
+                { field: "userStatus_sessionInfo_sessionName", headerName: "Session", align: "center", headerAlign: "center", renderCell: (params) => <span style={{ padding: "0.5rem", backgroundColor: stringToHexColor(params.value) }} >{params.value ? params.value : "-"}</span> },
+                { field: "userStatus_sessionInfo_sessionInfo_timetable_startTime", headerName: "Session start at", align: "center", headerAlign: "center", valueFormatter: (value) => value ? new Date(value).toLocaleString("ko-KR") : "-" },
+                { field: "userStatus_sessionInfo_sessionInfo_timetable_endTime", headerName: "Session end at", align: "center", headerAlign: "center", valueFormatter: (value) => value ? new Date(value).toLocaleString("ko-KR") : "-" },
+                { field: "user_createdAt", headerName: "Created at", align: "center", headerAlign: "center", valueFormatter: (value) => value ? new Date(value).toLocaleString("ko-KR") : "-" },
             ]);
 
             let outerTimeoutId: NodeJS.Timeout | null = null;
@@ -177,14 +200,26 @@ export default function OnlineUsers() {
         }
     }, [rows, dataGridRef]);
 
+    const updateClock = React.useCallback(() => {
+        setCurrentTime(new Date());
+        requestAnimationFrame(updateClock);
+    }, []);
+
+    React.useEffect(() => {
+        const id = requestAnimationFrame(updateClock);
+        return () => cancelAnimationFrame(id); // 컴포넌트 언마운트 시 타이머 정리
+    }, [updateClock]);
 
     return (
         <Box sx={{ height: '100%', width: '100%', background: "white", display: "flex", flexDirection: "column", rowGap: 5 }}>
             <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <h1 style={{ textAlign: "center", fontWeight: "bold", fontSize: "1.5rem", color: "black" }}>Online Users</h1>
-                <span>
-                    {socketConnected ? <span style={{ color: "green" }}>Connected</span> : <span style={{ color: "red" }}>Disconnected</span>}
-                    <StatusDot socketConnected={socketConnected} />
+                <span style={{ display: "flex", alignItems: "center", columnGap: "1rem" }}>
+                    <span>
+                        {socketConnected ? <span style={{ color: "green" }}>Connected</span> : <span style={{ color: "red" }}>Disconnected</span>}
+                        <StatusDot socketConnected={socketConnected} />
+                    </span>
+                    <span style={{ color: "gray" }}>{currentTime.toLocaleString("ko-KR")}</span>
                 </span>
             </Box>
             <Box sx={{
@@ -198,7 +233,9 @@ export default function OnlineUsers() {
                     apiRef={dataGridRef}
                     rows={rows}
                     columns={columns}
-                    sx={{ border: 0 }}
+                    sx={{
+                        border: 0
+                    }}
                     loading={isLoading}
                     sortModel={[
                         { field: "id", sort: "asc" }
