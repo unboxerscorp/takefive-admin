@@ -44,8 +44,8 @@ function flattenObject({ obj, result = {} }: { obj: Record<string, unknown> | ob
     return result;
 }
 
-// const socketServerUrl = "https://socket.takefive.now"
-const socketServerUrl = "http://192.168.1.43:3000"
+const socketServerUrl = "https://socket.takefive.now"
+// const socketServerUrl = "http://192.168.1.43:3000"
 
 export default function OnlineUsers() {
     const dataGridRef = useGridApiRef();
