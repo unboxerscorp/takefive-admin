@@ -32,7 +32,7 @@ function flattenObject({ obj, result = {} }: { obj: Record<string, unknown> | ob
 const socketServerUrl = "https://socket.takefive.now"
 
 export default function OnlineUsers() {
-    const apiRef = useGridApiRef();
+    const dataGridRef = useGridApiRef();
     const [isLoading, setIsLoading] = React.useState(false);
     const [columns, setColumns] = React.useState<GridColDef[]>([]);
     const [rows, setRows] = React.useState<Record<string, unknown>[]>([]);
@@ -67,7 +67,7 @@ export default function OnlineUsers() {
                                     if (!data || data.length === 0) {
                                         return []
                                     }
-                                    return currentUserData.map((item: Record<string, unknown>) => flattenObject({ obj: item }));
+                                    return currentUserData.map((item: Record<string, any>) => flattenObject({ obj: item })).map((item: Record<string, any>) => ({ ...item, id: +item.id }));
                                 }
                                 return rows
                             })
@@ -126,52 +126,57 @@ export default function OnlineUsers() {
 
         prevRowsRef.current = rows;
 
-        let outerTimeoutId: NodeJS.Timeout | null = null;
-        let innerTimeoutId: NodeJS.Timeout | null = null;
+        if (rows.length > 0) {
+            setColumns([
+                { field: "id", headerName: "ID", align: "center", headerAlign: "center" },
+                { field: "nickname", headerName: "Name", align: "center", headerAlign: "center" },
+                { field: "isAdmin", headerName: "Admin", align: "center", headerAlign: "center" },
+                { field: "isBackup", headerName: "Backup", align: "center", headerAlign: "center" },
+                { field: "queueStatus", headerName: "Queue", align: "center", headerAlign: "center" },
+                { field: "sessionStatus", headerName: "Session", align: "center", headerAlign: "center" },
+                {
+                    field: "profileImage", headerName: "Profile", align: "center", headerAlign: "center", renderCell: (params) =>
+                        <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", width: "100%", height: "100%" }}><Avatar style={{ width: 40, height: 40 }} src={params.value} /></Box>
+                },
+                { field: "regionCode", headerName: "Region", align: "center", headerAlign: "center" },
+                { field: "languageCode", headerName: "Language", align: "center", headerAlign: "center" },
+                { field: "level", headerName: "Level", align: "center", headerAlign: "center" },
+                { field: "gender", headerName: "Gender", align: "center", headerAlign: "center" },
+                {
+                    field: "lastMatchedWith", headerName: "Last Match", align: "center", headerAlign: "center", valueGetter: (value) => JSON.parse(value).join(" "), renderCell: (params) => <span style={{ padding: "0.5rem 0" }} >[{params.value}]</span>
+                },
+                { field: "createdAt", headerName: "Created at", align: "center", headerAlign: "center" },
+            ]);
 
-        outerTimeoutId = setTimeout(() => {
-            innerTimeoutId = setTimeout(() => {
-                if (apiRef?.current) {
-                    apiRef.current.autosizeColumns({
-                        // includeHeaders: true,
-                        includeOutliers: true,
-                    }).finally(() => {
+            let outerTimeoutId: NodeJS.Timeout | null = null;
+            let innerTimeoutId: NodeJS.Timeout | null = null;
+
+            outerTimeoutId = setTimeout(() => {
+                innerTimeoutId = setTimeout(() => {
+                    if (dataGridRef?.current) {
+                        dataGridRef.current.autosizeColumns({
+                            // includeHeaders: true,
+                            includeOutliers: true,
+                        }).finally(() => {
+                            setIsLoading(false);
+                        });
+                        dataGridRef.current.sortColumn("id", "asc");
+                    } else {
                         setIsLoading(false);
-                    });
-                } else {
-                    setIsLoading(false);
-                }
-            }, 200);
-        }, 1000);
+                    }
+                }, 200);
+            }, 1000);
 
-        return () => {
-            if (outerTimeoutId) clearTimeout(outerTimeoutId);
-            if (innerTimeoutId) clearTimeout(innerTimeoutId);
-        };
-    }, [rows, apiRef]);
+            return () => {
+                if (outerTimeoutId) clearTimeout(outerTimeoutId);
+                if (innerTimeoutId) clearTimeout(innerTimeoutId);
+            };
 
-    React.useEffect(() => {
-        setColumns([
-            { field: "id", headerName: "ID", align: "center", headerAlign: "center" },
-            { field: "nickname", headerName: "Name", align: "center", headerAlign: "center" },
-            { field: "isAdmin", headerName: "Admin", align: "center", headerAlign: "center" },
-            { field: "isBackup", headerName: "Backup", align: "center", headerAlign: "center" },
-            { field: "queueStatus", headerName: "Queue", align: "center", headerAlign: "center" },
-            { field: "sessionStatus", headerName: "Session", align: "center", headerAlign: "center" },
-            {
-                field: "profileImage", headerName: "Profile", align: "center", headerAlign: "center", renderCell: (params) =>
-                    <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", width: "100%", height: "100%" }}><Avatar style={{ width: 40, height: 40 }} src={params.value} /></Box>
-            },
-            { field: "regionCode", headerName: "Region", align: "center", headerAlign: "center" },
-            { field: "languageCode", headerName: "Language", align: "center", headerAlign: "center" },
-            { field: "level", headerName: "Level", align: "center", headerAlign: "center" },
-            { field: "gender", headerName: "Gender", align: "center", headerAlign: "center" },
-            {
-                field: "lastMatchedWith", headerName: "Last Match", align: "center", headerAlign: "center", valueGetter: (value) => JSON.parse(value).join(" "), renderCell: (params) => <span style={{ padding: "0.5rem 0" }} >[{params.value}]</span>
-            },
-            { field: "createdAt", headerName: "Created at", align: "center", headerAlign: "center" },
-        ]);
-    }, []);
+        } else {
+            setColumns([]);
+        }
+    }, [rows, dataGridRef]);
+
 
     return (
         <Box sx={{ height: '100%', width: '100%', background: "white", display: "flex", flexDirection: "column", rowGap: 5 }}>
@@ -190,7 +195,7 @@ export default function OnlineUsers() {
                 overflow: "auto"
             }}>
                 <DataGrid
-                    apiRef={apiRef}
+                    apiRef={dataGridRef}
                     rows={rows}
                     columns={columns}
                     sx={{ border: 0 }}

@@ -115,13 +115,25 @@ export default function Scheduler() {
 
     React.useEffect(() => {
         if (Object.values(jobs).length === 0) {
+            setRows([]);
             setColumns([]);
         } else {
+            const newRows: Record<string, any>[] = []
+            Object.values(jobs).forEach((queueJobs) => {
+                queueJobs.schedulers.forEach((scheduler) => {
+                    const { key, next, pattern } = scheduler as RepeatableJob;
+                    const [queueName, jobName, triggerType] = key.split(":")
+                    newRows.push({
+                        key, queueName, jobName, triggerType, next, pattern
+                    })
+                })
+            })
+            setRows(newRows);
             setColumns([
                 { field: "key", headerName: "Key", align: "center", headerAlign: "center" },
                 { field: "queueName", headerName: "Queue", align: "center", headerAlign: "center" },
                 { field: "jobName", headerName: "Name", align: "center", headerAlign: "center" },
-                { field: "next", headerName: "Next", align: "center", headerAlign: "center" },
+                { field: "next", headerName: "Next", align: "center", headerAlign: "center", valueFormatter: (value: number) => new Date(value).toLocaleString("ko-KR") },
                 { field: "triggerType", headerName: "Trigger", align: "center", headerAlign: "center" },
                 { field: "pattern", headerName: "Cron", align: "center", headerAlign: "center" },
                 {
@@ -129,17 +141,6 @@ export default function Scheduler() {
                 }
             ]);
         }
-        const newRows: Record<string, any>[] = []
-        Object.values(jobs).forEach((queueJobs) => {
-            queueJobs.schedulers.forEach((scheduler) => {
-                const { key, next, pattern } = scheduler as RepeatableJob;
-                const [queueName, jobName, triggerType] = key.split(":")
-                newRows.push({
-                    key, queueName, jobName, triggerType, next: next && new Date(next).toLocaleString("ko-KR"), pattern
-                })
-            })
-        })
-        setRows(newRows);
     }, [jobs]);
 
     React.useEffect(() => {
@@ -155,7 +156,9 @@ export default function Scheduler() {
                     }).finally(() => {
                         setIsLoading(false);
                     });
-                    dataGridRef.current.sortColumn("next", "asc");
+                    if (rows.length > 0) {
+                        dataGridRef.current.sortColumn("next", "asc");
+                    }
                 } else {
                     setIsLoading(false);
                 }
@@ -298,14 +301,6 @@ export default function Scheduler() {
                                     key: false,
                                 },
                             },
-                            sorting: {
-                                sortModel: [
-                                    {
-                                        field: "next",
-                                        sort: "asc",
-                                    },
-                                ],
-                            }
                         }}
                         onRowClick={(row) => {
                             setSelectedJob(row.row);

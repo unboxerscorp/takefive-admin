@@ -8,16 +8,12 @@ import ScheduleIcon from '@mui/icons-material/ScheduleOutlined';
 import BullIcon from '@mui/icons-material/AdsClick';
 import { headers } from "next/headers";
 
-const geistSans = localFont({
-  src: "./fonts/GeistVF.woff",
-  variable: "--font-geist-sans",
-  weight: "100 900",
-});
-const geistMono = localFont({
-  src: "./fonts/GeistMonoVF.woff",
-  variable: "--font-geist-mono",
-  weight: "100 900",
-});
+const pretendard = localFont({
+  src: './fonts/PretendardVariable.woff2',
+  display: 'swap',
+  weight: '45 920',
+  variable: '--font-pretendard',
+})
 
 export const metadata: Metadata = {
   title: "TakeFive Admin Page",
@@ -33,11 +29,10 @@ export default async function RootLayout({
 }>) {
   const requestHeaders = await headers();
   const pathName = requestHeaders.get("x-pathname") || "/";
-  console.log(pathName)
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${pretendard.variable} font-pretendard`}
       >
         <Box sx={{ display: 'flex' }}>
           <Drawer
