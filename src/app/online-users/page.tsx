@@ -9,7 +9,7 @@ import { setTimeout } from 'timers';
 function stringToHexColor(str: string | null): string {
     const toHexColor = () => {
         if (!str) {
-            return '#000000';
+            return '#FFFFFF';
         }
         let hash = 0;
         for (let i = 0; i < str.length; i++) {
