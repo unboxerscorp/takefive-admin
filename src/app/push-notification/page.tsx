@@ -10,6 +10,7 @@ import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider/LocalizationProvider';
 import dayjs, { Dayjs } from 'dayjs';
 import { DateTimeField } from '@mui/x-date-pickers/DateTimeField';
+import PageTitle from '@/utils/page-title';
 // import dayjs from 'dayjs';
 // import utc from 'dayjs/plugin/utc';
 // import timezone from 'dayjs/plugin/timezone';
@@ -341,7 +342,7 @@ export default function PushNotification() {
     return (<LocalizationProvider dateAdapter={AdapterDayjs}>
         <Box sx={{ height: '100%', width: '100%', background: "white", display: "flex", flexDirection: "column", rowGap: 5 }}>
             <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <h1 style={{ textAlign: "center", fontWeight: "bold", fontSize: "1.5rem", color: "black" }}>Push Notification</h1>
+                <PageTitle title="Push Notification" />
                 {/* <Box sx={{ display: "flex", alignItems: "center", columnGap: 2 }}>
                     <span style={{ color: "black", fontWeight: "bold" }} suppressHydrationWarning>최근 DB 업데이트 시간: {new Date(updatedAt ?? 0).toLocaleString("ko-KR", { timeZone: "Asia/Seoul" })} (KST)</span>
                     <Button onClick={callLambda} sx={{ backgroundColor: "red", color: "white", fontWeight: "bold", "&.Mui-disabled": { backgroundColor: "lightgrey" } }} disabled variant="contained">DB Refresh (필요 시*)</Button>
@@ -395,7 +396,10 @@ export default function PushNotification() {
                                     if (e.target.value !== "repeat") {
                                         setCronPattern("");
                                     }
-                                    if (e.target.value !== "delay") {
+
+                                    if (e.target.value === "delay") {
+                                        setDelayTime(dayjs());
+                                    } else {
                                         setDelayTime(null);
                                     }
                                     setTriggerType(e.target.value as TriggerDataType);

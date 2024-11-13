@@ -1,5 +1,6 @@
 "use client"
 
+import PageTitle from '@/utils/page-title';
 import { Avatar, Box } from '@mui/material';
 import { DataGrid, GridColDef, useGridApiRef } from '@mui/x-data-grid';
 import React from 'react';
@@ -54,7 +55,7 @@ export default function OnlineUsers() {
     const [rows, setRows] = React.useState<Record<string, unknown>[]>([]);
     const prevRowsRef = React.useRef(rows);
     const [socketConnected, setSocketConnected] = React.useState(false);
-    const [currentTime, setCurrentTime] = React.useState(new Date());
+
 
 
     React.useEffect(() => {
@@ -200,26 +201,15 @@ export default function OnlineUsers() {
         }
     }, [rows, dataGridRef]);
 
-    const updateClock = React.useCallback(() => {
-        setCurrentTime(new Date());
-        requestAnimationFrame(updateClock);
-    }, []);
 
-    React.useEffect(() => {
-        const id = requestAnimationFrame(updateClock);
-        return () => cancelAnimationFrame(id); // 컴포넌트 언마운트 시 타이머 정리
-    }, [updateClock]);
 
     return (
         <Box sx={{ height: '100%', width: '100%', background: "white", display: "flex", flexDirection: "column", rowGap: 5 }}>
             <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <h1 style={{ textAlign: "center", fontWeight: "bold", fontSize: "1.5rem", color: "black" }}>Online Users</h1>
-                <span style={{ display: "flex", alignItems: "center", columnGap: "1rem" }}>
-                    <span>
-                        {socketConnected ? <span style={{ color: "green" }}>Connected</span> : <span style={{ color: "red" }}>Disconnected</span>}
-                        <StatusDot socketConnected={socketConnected} />
-                    </span>
-                    <span style={{ color: "gray" }}>{currentTime.toLocaleString("ko-KR")}</span>
+                <PageTitle title="Online Users" />
+                <span style={{ display: "flex", alignItems: "center", columnGap: "0.2rem" }}>
+                    {socketConnected ? <span style={{ color: "green" }}>Connected</span> : <span style={{ color: "red" }}>Disconnected</span>}
+                    <StatusDot socketConnected={socketConnected} />
                 </span>
             </Box>
             <Box sx={{

@@ -1,10 +1,15 @@
 "use client"
 
-import { Box, Button, ButtonGroup, Card, FormControl, IconButton, InputLabel, MenuItem, Select, TextField } from '@mui/material';
+import PageTitle from '@/utils/page-title';
+import { Box, Button, ButtonGroup, Card, FormControl, InputLabel, MenuItem, Select, TextField } from '@mui/material';
 import { DataGrid, GridColDef, GridRenderCellParams, GridRowParams, useGridApiRef } from '@mui/x-data-grid';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+import { DateTimeField } from '@mui/x-date-pickers/DateTimeField';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider/LocalizationProvider';
 import { Job, RepeatableJob } from 'bullmq';
+import dayjs, { Dayjs } from 'dayjs';
 import React from 'react';
-import { setTimeout } from 'timers';
+import wait from 'waait'
 
 export default function Scheduler() {
     const dataGridRef = useGridApiRef();
@@ -13,6 +18,7 @@ export default function Scheduler() {
     const [rows, setRows] = React.useState<Record<string, any>[]>([]);
     const [isLoading, setIsLoading] = React.useState(false);
     const [dataRefreshedAt, setDataRefreshedAt] = React.useState<number>(0);
+    const [delayTime, setDelayTime] = React.useState<Dayjs | null>(null);
 
     const [queueName, setQueueName] = React.useState<"matchingQueue" | "notificationQueue" | "testQueue" | "">("");
     const [triggerType, setTriggerType] = React.useState<TriggerDataType | "">("");
@@ -40,25 +46,31 @@ export default function Scheduler() {
         }
 
         setIsLoading(true);
+        const requestData: { queueName: string, jobName: string, jobData: any, trigger: Trigger | null } = {
+            queueName,
+            jobName,
+            jobData,
+            trigger: null,
+        }
+
+        if (triggerType === "repeat") {
+            requestData.trigger = {
+                type: "repeat",
+                data: cronPattern
+            }
+        } else if (triggerType === "delay") {
+            requestData.trigger = {
+                type: "delay",
+                data: delayTime?.toDate().getTime()
+            }
+        } else if (triggerType === "now") {
+            requestData.trigger = {
+                type: "now"
+            }
+        }
         await fetch("/api/schedule", {
             method: "POST",
-            body: JSON.stringify(
-                triggerType === "repeat" ? {
-                    queueName,
-                    jobName,
-                    jobData,
-                    trigger: {
-                        type: "repeat",
-                        data: cronPattern
-                    }
-                } : {
-                    queueName,
-                    jobName,
-                    jobData,
-                    trigger: {
-                        type: "now"
-                    }
-                })
+            body: JSON.stringify(requestData)
         }).then(async (response) => {
             if (response.ok) {
                 resetInput();
@@ -84,6 +96,50 @@ export default function Scheduler() {
         });
     }
 
+    async function updateJob() {
+        if (!queueName || !jobName || !jobData) {
+            console.error(`Missing required fields: queueName, jobName, and jobData`);
+            return;
+        }
+
+        setIsLoading(true);
+        const requestData: { key: string, queueName: string, jobName: string, jobData: any, trigger: Trigger | null } = {
+            key: selectedJob.key,
+            queueName,
+            jobName,
+            jobData,
+            trigger: null,
+        }
+
+        if (triggerType === "repeat") {
+            requestData.trigger = {
+                type: "repeat",
+                data: cronPattern
+            }
+        } else if (triggerType === "delay") {
+            requestData.trigger = {
+                type: "delay",
+                data: delayTime?.toDate().getTime()
+            }
+        } else if (triggerType === "now") {
+            requestData.trigger = {
+                type: "now"
+            }
+        }
+
+        setIsLoading(true);
+        fetch("/api/schedule", {
+            method: "PUT",
+            body: JSON.stringify(requestData)
+        }).then(async (_) => {
+            await wait(10000);
+        }).then(async (_) => {
+            await getJobs();
+        }).finally(() => {
+            setIsLoading(false);
+        });
+    }
+
     React.useEffect(() => {
         setIsLoading(true);
         getJobs().finally(() => {
@@ -96,6 +152,7 @@ export default function Scheduler() {
         setQueueName("");
         setTriggerType("");
         setCronPattern("");
+        setDelayTime(null);
         setJobName("");
         setMessage("");
         dataGridRef.current?.selectRow(0, false, true);
@@ -182,10 +239,10 @@ export default function Scheduler() {
         }
     }, [message])
 
-    return (
+    return (<LocalizationProvider dateAdapter={AdapterDayjs}>
         <Box sx={{ height: '100%', width: '100%', background: "white", display: "flex", flexDirection: "column", rowGap: 5 }}>
             <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <h1 style={{ textAlign: "center", fontWeight: "bold", fontSize: "1.5rem", color: "black" }}>Scheduler</h1>
+                <PageTitle title="Scheduler" />
                 <Box sx={{ display: "flex", columnGap: 2, justifyContent: "center", alignItems: "center" }}>
                     <span style={{ fontWeight: "bold", fontSize: "1rem", color: "black" }}>새로 고침 시간: {new Date(dataRefreshedAt).toLocaleString("ko-KR")}</span>
                     <Button variant="contained" onClick={getJobs}>Refresh</Button>
@@ -244,19 +301,31 @@ export default function Scheduler() {
                                     if (e.target.value !== "repeat") {
                                         setCronPattern("");
                                     }
+
+                                    if (e.target.value === "delay") {
+                                        setDelayTime(dayjs());
+                                    } else {
+                                        setDelayTime(null);
+                                    }
                                     setTriggerType(e.target.value as TriggerDataType);
                                 }}
                                 value={triggerType}
                                 sx={{ backgroundColor: "white", color: "black" }}
                             >
                                 <MenuItem value="repeat">repeat</MenuItem>
-                                {/* <MenuItem value="delay">delay</MenuItem> */}
+                                <MenuItem value="delay">delay</MenuItem>
                                 <MenuItem value="now">now</MenuItem>
                             </Select>
                         </FormControl>
-                        {triggerType === "repeat" && <TextField fullWidth label="Cron Pattern" onChange={(e) => {
-                            setCronPattern(e.target.value);
-                        }} value={cronPattern} placeholder='* * * * * *' sx={{ backgroundColor: "white", color: "black" }} />}
+                        {triggerType === "repeat" ? <TextField fullWidth label="Cron Pattern" onChange={(e) => {
+                            setCronPattern(e.target.value); 0
+                        }} value={cronPattern} placeholder='* * * * * *' sx={{ backgroundColor: "white", color: "black" }} /> : triggerType === "delay" ? <DateTimeField fullWidth
+                            sx={{ backgroundColor: "white", color: "black" }}
+                            format='YYYY-MM-DD HH:mm:ss'
+                            label="Delay Time"
+                            value={delayTime}
+                            onChange={(newValue) => { setDelayTime(newValue); }}
+                        /> : null}
                         <textarea
                             onChange={(e) => {
                                 setMessage(e.target.value);
@@ -269,8 +338,8 @@ export default function Scheduler() {
                         />
                         <ButtonGroup variant="contained" aria-label="Basic button group">
                             <Button sx={{ backgroundColor: "gold" }} onClick={resetInput}>Reset Input</Button>
-                            <Button sx={{ backgroundColor: selectedJob ? "orange" : "blue" }} onClick={addJob}>{selectedJob ? "Update Job" : "Add Job"}</Button>
-                            {selectedJob && <Button sx={{ backgroundColor: "red" }} onClick={() => deleteJob({ queueName: queueName, key: selectedJob.key })}>Delete Job</Button>}
+                            <Button sx={{ backgroundColor: selectedJob ? "orange" : "blue" }} onClick={selectedJob ? updateJob : addJob}>{selectedJob ? "Update Job" : "Add Job"}</Button>
+                            {selectedJob && <Button sx={{ backgroundColor: "red" }} onClick={() => { deleteJob({ queueName: queueName, key: selectedJob.key }); resetInput(); }}>Delete Job</Button>}
                         </ButtonGroup>
                     </Card>
                 </Box>
@@ -307,6 +376,7 @@ export default function Scheduler() {
                             setQueueName(row.row.queueName);
                             setTriggerType(row.row.triggerType);
                             setCronPattern(row.row.pattern);
+                            setDelayTime(dayjs(row.row.next));
                             setJobName(row.row.jobName);
                             const message = getJobData(row);
                             setMessage(message ? message : "");
@@ -315,6 +385,7 @@ export default function Scheduler() {
                 </Box>
             </Box>
         </Box >
+    </LocalizationProvider>
     );
 }
 
