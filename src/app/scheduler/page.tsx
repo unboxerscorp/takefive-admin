@@ -15,7 +15,7 @@ export default function Scheduler() {
     const [dataRefreshedAt, setDataRefreshedAt] = React.useState<number>(0);
 
     const [queueName, setQueueName] = React.useState<"matchingQueue" | "notificationQueue" | "testQueue" | "">("");
-    const [triggerType, setTriggerType] = React.useState<"repeat" | "once" | "now" | "">("");
+    const [triggerType, setTriggerType] = React.useState<TriggerDataType | "">("");
     const [cronPattern, setCronPattern] = React.useState<string>("");
     const [jobName, setJobName] = React.useState<string>("");
     const [message, setMessage] = React.useState<string>("");
@@ -244,13 +244,13 @@ export default function Scheduler() {
                                     if (e.target.value !== "repeat") {
                                         setCronPattern("");
                                     }
-                                    setTriggerType(e.target.value as "repeat" | "once" | "now");
+                                    setTriggerType(e.target.value as TriggerDataType);
                                 }}
                                 value={triggerType}
                                 sx={{ backgroundColor: "white", color: "black" }}
                             >
                                 <MenuItem value="repeat">repeat</MenuItem>
-                                {/* <MenuItem value="once">once</MenuItem> */}
+                                {/* <MenuItem value="delay">delay</MenuItem> */}
                                 <MenuItem value="now">now</MenuItem>
                             </Select>
                         </FormControl>

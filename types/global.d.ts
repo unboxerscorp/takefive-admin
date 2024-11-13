@@ -4,9 +4,10 @@ declare global {
     var sshTunnelServer: Server | null;
     var redisClient: Redis | null;
 
+    type TriggerDataType = "repeat" | "delay" | "now";
     type Trigger = {
-        type: "repeat" | "once" | "now";
-        data: any;
+        type: TriggerDataType;
+        data?: any;
     };
 }
 

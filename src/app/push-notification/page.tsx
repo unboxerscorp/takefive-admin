@@ -3,9 +3,19 @@
 import { Box, Button, Card, FormControl, InputLabel, MenuItem, Select, TextField } from '@mui/material';
 import { DataGrid, GridColDef, useGridApiRef } from '@mui/x-data-grid';
 import React from 'react';
-import ReactDOM from 'react-dom';
 import { setTimeout } from 'timers';
-import { enqueueSnackbar, SnackbarProvider, useSnackbar } from "notistack";
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+import { useSnackbar } from "notistack";
+import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider/LocalizationProvider';
+import dayjs, { Dayjs } from 'dayjs';
+import { DateTimeField } from '@mui/x-date-pickers/DateTimeField';
+// import dayjs from 'dayjs';
+// import utc from 'dayjs/plugin/utc';
+// import timezone from 'dayjs/plugin/timezone';
+
+// dayjs.extend(utc);
+// dayjs.extend(timezone);
 
 function chunkArray<T>(array: T[], size: number): T[][] {
     const chunks: T[][] = [];
@@ -25,8 +35,9 @@ export default function PushNotification() {
     const [title, setTitle] = React.useState<string>("");
     const [message, setMessage] = React.useState<string>("");
     const [target, setTarget] = React.useState<string>("");
-    const [triggerType, setTriggerType] = React.useState<"repeat" | "once" | "now" | "">("");
+    const [triggerType, setTriggerType] = React.useState<TriggerDataType | "">("");
     const [cronPattern, setCronPattern] = React.useState<string>("");
+    const [delayTime, setDelayTime] = React.useState<Dayjs | null>(null);
     const [sendAble, setSendAble] = React.useState<boolean>(false);
     const { enqueueSnackbar } = useSnackbar();
 
@@ -84,25 +95,32 @@ export default function PushNotification() {
         };
 
         setIsLoading(true);
+
+        const requestData: { queueName: string, jobName: string, jobData: any, trigger: Trigger | null } = {
+            queueName,
+            jobName,
+            jobData,
+            trigger: null,
+        }
+
+        if (triggerType === "repeat") {
+            requestData.trigger = {
+                type: "repeat",
+                data: cronPattern
+            }
+        } else if (triggerType === "delay") {
+            requestData.trigger = {
+                type: "delay",
+                data: delayTime?.toDate().getTime()
+            }
+        } else if (triggerType === "now") {
+            requestData.trigger = {
+                type: "now"
+            }
+        }
         await fetch("/api/schedule", {
             method: "POST",
-            body: JSON.stringify(
-                triggerType === "repeat" ? {
-                    queueName,
-                    jobName,
-                    jobData,
-                    trigger: {
-                        type: "repeat",
-                        data: cronPattern
-                    }
-                } : {
-                    queueName,
-                    jobName,
-                    jobData,
-                    trigger: {
-                        type: "now"
-                    }
-                })
+            body: JSON.stringify(requestData)
         }).then(async (response) => {
             if (response.ok) {
                 resetInput();
@@ -117,6 +135,7 @@ export default function PushNotification() {
         setTarget("");
         setTriggerType("");
         setCronPattern("");
+        setDelayTime(null);
         setTitle("");
         setMessage("");
         setSendAble(false);
@@ -224,6 +243,24 @@ export default function PushNotification() {
             return;
         }
 
+        if (triggerType === "delay") {
+            if (!delayTime) {
+                enqueueSnackbar("Delay time is required", {
+                    variant: "error",
+                    autoHideDuration: 10000,
+                    anchorOrigin: { vertical: "bottom", horizontal: "right" }
+                })
+                return;
+            } else if (delayTime.isBefore(dayjs())) {
+                enqueueSnackbar("Delay time must be in the future", {
+                    variant: "error",
+                    autoHideDuration: 10000,
+                    anchorOrigin: { vertical: "bottom", horizontal: "right" }
+                })
+                return;
+            }
+        }
+
         if (!title) {
             enqueueSnackbar("Title is required", {
                 variant: "error",
@@ -301,7 +338,7 @@ export default function PushNotification() {
     //     }
     // };
 
-    return (
+    return (<LocalizationProvider dateAdapter={AdapterDayjs}>
         <Box sx={{ height: '100%', width: '100%', background: "white", display: "flex", flexDirection: "column", rowGap: 5 }}>
             <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <h1 style={{ textAlign: "center", fontWeight: "bold", fontSize: "1.5rem", color: "black" }}>Push Notification</h1>
@@ -354,26 +391,34 @@ export default function PushNotification() {
                                 labelId='trigger-type-label'
                                 id='trigger-type'
                                 label="Trigger Type"
-                                // disabled={selectedJob ? true : false}
                                 onChange={(e) => {
                                     if (e.target.value !== "repeat") {
                                         setCronPattern("");
                                     }
-                                    setTriggerType(e.target.value as "repeat" | "once" | "now");
+                                    if (e.target.value !== "delay") {
+                                        setDelayTime(null);
+                                    }
+                                    setTriggerType(e.target.value as TriggerDataType);
                                     setSendAble(false);
                                 }}
                                 value={triggerType}
                                 sx={{ backgroundColor: "white", color: "black" }}
                             >
                                 <MenuItem value="repeat">repeat</MenuItem>
-                                {/* <MenuItem value="once">once</MenuItem> */}
+                                <MenuItem value="delay">delay</MenuItem>
                                 <MenuItem value="now">now</MenuItem>
                             </Select>
                         </FormControl>
-                        {triggerType === "repeat" && <TextField fullWidth label="Cron Pattern" onChange={(e) => {
+                        {triggerType === "repeat" ? <TextField fullWidth label="Cron Pattern" onChange={(e) => {
                             setCronPattern(e.target.value); 0
                             setSendAble(false);
-                        }} value={cronPattern} placeholder='* * * * * *' sx={{ backgroundColor: "white", color: "black" }} />}
+                        }} value={cronPattern} placeholder='* * * * * *' sx={{ backgroundColor: "white", color: "black" }} /> : triggerType === "delay" ? <DateTimeField
+                            sx={{ backgroundColor: "white", color: "black" }}
+                            format='YYYY-MM-DD HH:mm:ss'
+                            label="Controlled picker"
+                            value={delayTime}
+                            onChange={(newValue) => { setDelayTime(newValue); setSendAble(false); }}
+                        /> : null}
                         <TextField label="Title" fullWidth onChange={(e) => {
                             setTitle(e.target.value);
                         }} value={title} sx={{ backgroundColor: "white", color: "black" }} />
@@ -430,6 +475,7 @@ export default function PushNotification() {
                 </Box>
             </Box>
         </Box>
+    </LocalizationProvider>
     );
 }
 

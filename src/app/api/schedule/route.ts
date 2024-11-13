@@ -52,15 +52,15 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
                     data: requestData,
                 });
                 break;
-            case "once":
+            case "delay":
                 if (!trigger.data) {
                     return NextResponse.json(
                         { message: 'Missing required field: trigger.data' },
                         { status: 400 }
                     );
                 }
-                const onceTrigger: Date = new Date(trigger.data);
-                const delay = onceTrigger.getTime() - Date.now();
+                const delayTrigger: Date = new Date(trigger.data);
+                const delay = delayTrigger.getTime() - Date.now();
                 if (delay <= 0) {
                     return NextResponse.json(
                         { message: 'Invalid trigger data' },
