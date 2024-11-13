@@ -35,7 +35,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         );
     }
 
-    const jobId = `${queueName}:${jobName}:${trigger.type}`;
+    const jobId = `${queueName}:${jobName}:${trigger.type}:${new Date().getTime()}`;
 
     try {
         switch (trigger.type) {
@@ -69,11 +69,11 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
                 }
                 await queue.upsertJobScheduler(jobId, { every: delay, endDate: Date.now() + delay }, {
                     name: jobName,
-                    data: jobData,
+                    data: requestData,
                 });
                 break;
             case "now":
-                await queue.add(jobName, jobData, { jobId });
+                await queue.add(jobName, requestData, { jobId });
                 break;
         }
         return NextResponse.json(

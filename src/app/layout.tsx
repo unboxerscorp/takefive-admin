@@ -7,6 +7,7 @@ import NotificationIcon from '@mui/icons-material/NotificationsOutlined';
 import ScheduleIcon from '@mui/icons-material/ScheduleOutlined';
 import BullIcon from '@mui/icons-material/AdsClick';
 import { headers } from "next/headers";
+import SnackbarWrapper from "@/utils/snackbar-wrapper";
 
 const pretendard = localFont({
   src: './fonts/PretendardVariable.woff2',
@@ -34,62 +35,63 @@ export default async function RootLayout({
       <body
         className={`${pretendard.variable} font-pretendard`}
       >
-        <Box sx={{ display: 'flex' }}>
-          <Drawer
-            sx={{
-              width: drawerWidth,
-              flexShrink: 0,
-              '& .MuiDrawer-paper': {
+        <SnackbarWrapper>
+          <Box sx={{ display: 'flex' }}>
+            <Drawer
+              sx={{
                 width: drawerWidth,
-                boxSizing: 'border-box',
-              },
-            }}
-            variant="permanent"
-            anchor="left"
-          >
-            <List>
-              <ListItem disablePadding>
-                <ListItemButton href="/online-users">
-                  <ListItemIcon>
-                    <ToggleOn sx={{ color: 'yellowgreen' }} />
-                  </ListItemIcon>
-                  <ListItemText primary="Online Users" />
-                </ListItemButton>
-              </ListItem>
-              <ListItem disablePadding>
-                <ListItemButton href="/push-notification">
-                  <ListItemIcon>
-                    <NotificationIcon sx={{ color: 'orange' }} />
-                  </ListItemIcon>
-                  <ListItemText primary="Push Notification" />
-                </ListItemButton>
-              </ListItem>
-              <ListItem disablePadding>
-                <ListItemButton href="/scheduler">
-                  <ListItemIcon>
-                    <ScheduleIcon sx={{ color: 'red' }} />
-                  </ListItemIcon>
-                  <ListItemText primary="Scheduler" />
-                </ListItemButton>
-              </ListItem>
-              <ListItem disablePadding>
-                <ListItemButton href="/bullboard">
-                  <ListItemIcon>
-                    <BullIcon sx={{ color: 'red' }} />
-                  </ListItemIcon>
-                  <ListItemText primary="Bull Board" />
-                </ListItemButton>
-              </ListItem>
-            </List>
-          </Drawer>
-          <Box
-            component="main"
-            sx={{ flexGrow: 1, bgcolor: 'background.default', p: ["/bullboard"].includes(pathName) ? 0 : 8, width: `calc(100% - ${drawerWidth}px)`, height: '100vh' }}
-          >
-            {children}
+                flexShrink: 0,
+                '& .MuiDrawer-paper': {
+                  width: drawerWidth,
+                  boxSizing: 'border-box',
+                },
+              }}
+              variant="permanent"
+              anchor="left"
+            >
+              <List>
+                <ListItem disablePadding>
+                  <ListItemButton href="/online-users">
+                    <ListItemIcon>
+                      <ToggleOn sx={{ color: 'yellowgreen' }} />
+                    </ListItemIcon>
+                    <ListItemText primary="Online Users" />
+                  </ListItemButton>
+                </ListItem>
+                <ListItem disablePadding>
+                  <ListItemButton href="/push-notification">
+                    <ListItemIcon>
+                      <NotificationIcon sx={{ color: 'orange' }} />
+                    </ListItemIcon>
+                    <ListItemText primary="Push Notification" />
+                  </ListItemButton>
+                </ListItem>
+                <ListItem disablePadding>
+                  <ListItemButton href="/scheduler">
+                    <ListItemIcon>
+                      <ScheduleIcon sx={{ color: 'red' }} />
+                    </ListItemIcon>
+                    <ListItemText primary="Scheduler" />
+                  </ListItemButton>
+                </ListItem>
+                <ListItem disablePadding>
+                  <ListItemButton href="/bullboard">
+                    <ListItemIcon>
+                      <BullIcon sx={{ color: 'red' }} />
+                    </ListItemIcon>
+                    <ListItemText primary="Bull Board" />
+                  </ListItemButton>
+                </ListItem>
+              </List>
+            </Drawer>
+            <Box
+              component="main"
+              sx={{ flexGrow: 1, bgcolor: 'background.default', p: ["/bullboard"].includes(pathName) ? 0 : 8, width: `calc(100% - ${drawerWidth}px)`, height: '100vh' }}
+            >
+              {children}
+            </Box>
           </Box>
-        </Box>
-
+        </SnackbarWrapper>
       </body>
     </html>
   );

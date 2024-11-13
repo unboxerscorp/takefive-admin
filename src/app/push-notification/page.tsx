@@ -1,10 +1,11 @@
 "use client"
 
-import { Box, Button, Card } from '@mui/material';
+import { Box, Button, Card, FormControl, InputLabel, MenuItem, Select, TextField } from '@mui/material';
 import { DataGrid, GridColDef, useGridApiRef } from '@mui/x-data-grid';
 import React from 'react';
 import ReactDOM from 'react-dom';
 import { setTimeout } from 'timers';
+import { enqueueSnackbar, SnackbarProvider, useSnackbar } from "notistack";
 
 function chunkArray<T>(array: T[], size: number): T[][] {
     const chunks: T[][] = [];
@@ -21,59 +22,112 @@ export default function PushNotification() {
     const [updatedAt, setUpdatedAt] = React.useState<number | null>(null);
     const [isLoading, setIsLoading] = React.useState(false);
 
-    const titleRef = React.useRef<HTMLInputElement>(null);
-    const messageRef = React.useRef<HTMLTextAreaElement>(null);
+    const [title, setTitle] = React.useState<string>("");
+    const [message, setMessage] = React.useState<string>("");
+    const [target, setTarget] = React.useState<string>("");
+    const [triggerType, setTriggerType] = React.useState<"repeat" | "once" | "now" | "">("");
+    const [cronPattern, setCronPattern] = React.useState<string>("");
+    const [sendAble, setSendAble] = React.useState<boolean>(false);
+    const { enqueueSnackbar } = useSnackbar();
 
-    const fetchData = React.useCallback(() => {
+    // const fetchData = React.useCallback(() => {
+    //     setIsLoading(true);
+    //     fetch(`/api/redis?${new URLSearchParams({ key: "preload_data:push_tokens" }).toString()}`, {
+    //         method: "GET"
+    //     })
+    //         .then((res) => res.json())
+    //         .catch((err) => {
+    //             console.error(err);
+    //             return { data: {} }
+    //         })
+    //         .then(({ data }) => {
+    //             const values = Object.values(data)
+    //             const value: { data: [{ user_id: number, token: string }], updated_at: number } | undefined = values.shift() as any;
+    //             return value;
+    //         })
+    //         .then((value) => {
+    //             setIsLoading(false);
+    //             if (!value) {
+    //                 return;
+    //             }
+    //             const { data: pushTokens, updated_at: updatedAt } = value;
+    //             setUpdatedAt(updatedAt);
+    //             ReactDOM.flushSync(() => {
+    //                 setColumns([
+    //                     { field: "user_id", flex: 1, headerName: "User ID", align: "center", headerAlign: "center" },
+    //                     { field: "token", headerName: "Push Token", align: "center", headerAlign: "center" }
+    //                 ]);
+    //                 if (pushTokens !== rows) {
+    //                     setRows(pushTokens);
+    //                 }
+    //             })
+    //         }).then(() => sleep(0)).then(() => {
+    //             dataGridRef.current.autosizeColumns({
+    //                 includeHeaders: true,
+    //                 includeOutliers: true,
+    //             })
+    //         });
+    // }, [dataGridRef, rows]);
+
+    // React.useEffect(() => {
+    //     // fetchData();
+    // }, [fetchData]);
+
+    async function sendNotificationJob() {
+        const queueName = "notificationQueue";
+        const jobName = target === "all" ? "sendPushNotificationToAll" : target === "selected" ? "sendPushNotificationToSelected" : "sendPushNotificationToAdmin";
+
+        const jobData = {
+            title,
+            message,
+            dryRun: false,
+        };
+
         setIsLoading(true);
-        fetch(`/api/redis?${new URLSearchParams({ key: "preload_data:push_tokens" }).toString()}`, {
-            method: "GET"
-        })
-            .then((res) => res.json())
-            .catch((err) => {
-                console.error(err);
-                return { data: {} }
-            })
-            .then(({ data }) => {
-                const values = Object.values(data)
-                const value: { data: [{ user_id: number, token: string }], updated_at: number } | undefined = values.shift() as any;
-                return value;
-            })
-            .then((value) => {
-                setIsLoading(false);
-                if (!value) {
-                    return;
-                }
-                const { data: pushTokens, updated_at: updatedAt } = value;
-                setUpdatedAt(updatedAt);
-                ReactDOM.flushSync(() => {
-                    setColumns([
-                        { field: "user_id", flex: 1, headerName: "User ID", align: "center", headerAlign: "center" },
-                        { field: "token", headerName: "Push Token", align: "center", headerAlign: "center" }
-                    ]);
-                    if (pushTokens !== rows) {
-                        setRows(pushTokens);
+        await fetch("/api/schedule", {
+            method: "POST",
+            body: JSON.stringify(
+                triggerType === "repeat" ? {
+                    queueName,
+                    jobName,
+                    jobData,
+                    trigger: {
+                        type: "repeat",
+                        data: cronPattern
+                    }
+                } : {
+                    queueName,
+                    jobName,
+                    jobData,
+                    trigger: {
+                        type: "now"
                     }
                 })
-            }).then(() => sleep(0)).then(() => {
-                dataGridRef.current.autosizeColumns({
-                    includeHeaders: true,
-                    includeOutliers: true,
-                })
-            });
-    }, [dataGridRef, rows]);
+        }).then(async (response) => {
+            if (response.ok) {
+                resetInput();
+                // await getJobs();
+            }
+        }).finally(() => {
+            setIsLoading(false);
+        });
+    }
 
-    React.useEffect(() => {
-        // fetchData();
-    }, [fetchData]);
+    const resetInput = () => {
+        setTarget("");
+        setTriggerType("");
+        setCronPattern("");
+        setTitle("");
+        setMessage("");
+        setSendAble(false);
+    }
 
-
-    const sendPushNotificationToSelected = async ({
-        title, message, dryRun,
+    const sendPushNotificationPrecheckToSelected = async ({
+        title, message,
     }: {
         title: string,
         message: string
-        dryRun: boolean
+
     }) => {
         const userIds: number[] = [];
 
@@ -83,7 +137,7 @@ export default function PushNotification() {
         });
 
         if (userIds.length === 0) {
-            console.error("No users selected");
+            enqueueSnackbar("Please select at least one user", { variant: "warning" });
             return;
         }
 
@@ -95,18 +149,17 @@ export default function PushNotification() {
             body: JSON.stringify({
                 title,
                 body: message,
-                dryRun,
                 userIds,
+                dryRun: true,
             })
         });
     }
 
-    const sendPushNotificationToAll = async ({
-        title, message, dryRun,
+    const sendPushNotificationPrecheckToAll = async ({
+        title, message,
     }: {
         title: string,
         message: string
-        dryRun: boolean
     }) => {
         return await fetch("https://api.takefive.now/api/admin/push-notification-all", {
             method: "POST",
@@ -116,17 +169,16 @@ export default function PushNotification() {
             body: JSON.stringify({
                 title,
                 body: message,
-                dryRun,
+                dryRun: true
             })
         });
     }
 
-    const sendPushNotificationToAdmin = async ({
-        title, message, dryRun,
+    const sendPushNotificationPrecheckToAdmin = async ({
+        title, message,
     }: {
         title: string,
         message: string
-        dryRun: boolean
     }) => {
         return await fetch("https://api.takefive.now/api/admin/push-notification", {
             method: "POST",
@@ -136,75 +188,127 @@ export default function PushNotification() {
             body: JSON.stringify({
                 title,
                 body: message,
-                dryRun,
+                dryRun: true,
                 isAdmin: true,
             })
         });
     }
 
-    const sendPushNotification = async ({ pushType, dryRun }: {
-        pushType: "all" | "selected" | "admin",
-        dryRun: boolean,
+    const sendPushNotification = async ({ precheck }: {
+        precheck: boolean,
     }) => {
-        const title = titleRef.current?.value;
-        const message = messageRef.current?.value;
+        if (!target) {
+            enqueueSnackbar("Target is required", {
+                variant: "error",
+                autoHideDuration: 10000,
+                anchorOrigin: { vertical: "bottom", horizontal: "right" }
+            })
+            return;
+        }
+
+        if (!triggerType) {
+            enqueueSnackbar("Trigger type is required", {
+                variant: "error",
+                autoHideDuration: 10000,
+                anchorOrigin: { vertical: "bottom", horizontal: "right" }
+            })
+            return;
+        }
+
+        if (triggerType === "repeat" && !cronPattern) {
+            enqueueSnackbar("Cron pattern is required", {
+                variant: "error",
+                autoHideDuration: 10000,
+                anchorOrigin: { vertical: "bottom", horizontal: "right" }
+            })
+            return;
+        }
 
         if (!title) {
-            console.error("Title is required");
+            enqueueSnackbar("Title is required", {
+                variant: "error",
+                autoHideDuration: 10000,
+                anchorOrigin: { vertical: "bottom", horizontal: "right" }
+            })
             return;
         }
         if (!message) {
-            console.error("Message is required");
+            enqueueSnackbar("Message is required", {
+                variant: "error",
+                autoHideDuration: 10000,
+                anchorOrigin: { vertical: "bottom", horizontal: "right" }
+            })
             return;
         }
 
         let response: Response | undefined;
 
-        switch (pushType) {
-            case "all":
-                response = await sendPushNotificationToAll({ title, message, dryRun });
-                break;
-            case "selected":
-                response = await sendPushNotificationToSelected({ title, message, dryRun });
-                break;
-            case "admin":
-                response = await sendPushNotificationToAdmin({ title, message, dryRun });
-                break;
-            default:
-                break;
+        if (precheck) {
+            switch (target) {
+                case "all":
+                    response = await sendPushNotificationPrecheckToAll({ title, message });
+                    break;
+                case "selected":
+                    response = await sendPushNotificationPrecheckToSelected({ title, message });
+                    break;
+                case "admin":
+                    response = await sendPushNotificationPrecheckToAdmin({ title, message });
+                    break;
+                default:
+                    break;
+            }
+        } else {
+            switch (target) {
+                case "all":
+                case "selected":
+                case "admin":
+                    sendNotificationJob();
+                    break;
+                default:
+                    break;
+            }
         }
 
         if (response) {
             const data = await response.json();
             if (response.status === 200) {
-                console.log(data);
+                enqueueSnackbar(JSON.stringify(data), {
+                    variant: "success",
+                    autoHideDuration: 10000,
+                    anchorOrigin: { vertical: "bottom", horizontal: "right" }
+                });
+                setSendAble(true);
             } else {
-                console.error(data);
+                enqueueSnackbar(JSON.stringify(data), {
+                    variant: "error",
+                    autoHideDuration: 10000,
+                    anchorOrigin: { vertical: "bottom", horizontal: "right" }
+                });
             }
         }
     }
 
-    const callLambda = async () => {
-        const res = await fetch('/api/call-lambda', {
-            method: 'POST',
-        });
-        const data = await res.json();
-        if (res.status === 200) {
-            console.log(data);
-            fetchData();
-        } else {
-            console.error(data);
-        }
-    };
+    // const callLambda = async () => {
+    //     const res = await fetch('/api/call-lambda', {
+    //         method: 'POST',
+    //     });
+    //     const data = await res.json();
+    //     if (res.status === 200) {
+    //         console.log(data);
+    //         fetchData();
+    //     } else {
+    //         console.error(data);
+    //     }
+    // };
 
     return (
         <Box sx={{ height: '100%', width: '100%', background: "white", display: "flex", flexDirection: "column", rowGap: 5 }}>
             <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <h1 style={{ textAlign: "center", fontWeight: "bold", fontSize: "1.5rem", color: "black" }}>Push Notification</h1>
-                <Box sx={{ display: "flex", alignItems: "center", columnGap: 2 }}>
+                {/* <Box sx={{ display: "flex", alignItems: "center", columnGap: 2 }}>
                     <span style={{ color: "black", fontWeight: "bold" }} suppressHydrationWarning>최근 DB 업데이트 시간: {new Date(updatedAt ?? 0).toLocaleString("ko-KR", { timeZone: "Asia/Seoul" })} (KST)</span>
                     <Button onClick={callLambda} sx={{ backgroundColor: "red", color: "white", fontWeight: "bold", "&.Mui-disabled": { backgroundColor: "lightgrey" } }} disabled variant="contained">DB Refresh (필요 시*)</Button>
-                </Box>
+                </Box> */}
             </Box>
             <Box sx={{ display: "flex", justifyContent: "space-between", flexGrow: 1, overflow: "hidden", flexDirection: "row", columnGap: 2 }}>
                 <Box
@@ -226,38 +330,70 @@ export default function PushNotification() {
                     }}
                 >
                     <Card sx={{ background: "linear-gradient(45deg, #FFA611 00%, #F6820D 50%, #FFCB2B 100%)", display: "flex", flexDirection: "column", rowGap: 3, padding: 5, width: "100%", height: "100%", textAlign: "center" }} elevation={3}>
-                        <span style={{ color: "white", fontWeight: "bold", fontSize: "1.5rem" }}>알림 내용을 입력해주세요</span>
-                        <input
-                            ref={titleRef}
-                            id="outlined-required"
-                            placeholder='Title'
-                            style={{
-                                backgroundColor: "white",
-                                borderRadius: "4px",
-                                padding: "8px",
-                                boxSizing: "border-box"
-                            }}
-                        />
+                        <FormControl fullWidth>
+                            <InputLabel id="target-select-label">Target</InputLabel>
+                            <Select
+                                labelId='target-select-label'
+                                id='target-select'
+                                label="Target"
+                                onChange={(e) => {
+                                    setTarget(e.target.value as "toAll" | "toAdmin" | "toSelected");
+                                    setSendAble(false);
+                                }}
+                                value={target}
+                                sx={{ backgroundColor: "white", color: "black" }}
+                            >
+                                <MenuItem value="all">toAll</MenuItem>
+                                <MenuItem value="admin">toAdmin</MenuItem>
+                                {/* <MenuItem value="selected">toSelected</MenuItem> */}
+                            </Select>
+                        </FormControl>
+                        <FormControl fullWidth>
+                            <InputLabel id="trigger-type-select-label">Trigger Type</InputLabel>
+                            <Select
+                                labelId='trigger-type-label'
+                                id='trigger-type'
+                                label="Trigger Type"
+                                // disabled={selectedJob ? true : false}
+                                onChange={(e) => {
+                                    if (e.target.value !== "repeat") {
+                                        setCronPattern("");
+                                    }
+                                    setTriggerType(e.target.value as "repeat" | "once" | "now");
+                                    setSendAble(false);
+                                }}
+                                value={triggerType}
+                                sx={{ backgroundColor: "white", color: "black" }}
+                            >
+                                <MenuItem value="repeat">repeat</MenuItem>
+                                {/* <MenuItem value="once">once</MenuItem> */}
+                                <MenuItem value="now">now</MenuItem>
+                            </Select>
+                        </FormControl>
+                        {triggerType === "repeat" && <TextField fullWidth label="Cron Pattern" onChange={(e) => {
+                            setCronPattern(e.target.value); 0
+                            setSendAble(false);
+                        }} value={cronPattern} placeholder='* * * * * *' sx={{ backgroundColor: "white", color: "black" }} />}
+                        <TextField label="Title" fullWidth onChange={(e) => {
+                            setTitle(e.target.value);
+                        }} value={title} sx={{ backgroundColor: "white", color: "black" }} />
                         <textarea
-                            ref={messageRef}
+                            onChange={(e) => {
+                                setMessage(e.target.value);
+                                setSendAble(false);
+                            }}
+                            value={message}
                             id="outlined-required"
                             placeholder="Message"
                             style={{
                                 width: "100%", height: "100%", resize: "none", border: "1px solid #ccc", borderRadius: "4px", padding: "8px", boxSizing: "border-box"
                             }}
                         />
+
                     </Card>
                     <Box sx={{ display: "flex", flexDirection: "column", rowGap: 2, width: "100%" }}>
-                        <Box sx={{ width: "100%", display: "flex", justifyContent: "space-around", alignItems: "center" }}>
-                            <Button variant="contained" sx={{ backgroundColor: "skyblue" }} onClick={() => sendPushNotification({ pushType: "all", dryRun: true })}>Send To All<br />(Preview)</Button>
-                            <Button variant="contained" sx={{ backgroundColor: "skyblue" }} onClick={() => sendPushNotification({ pushType: "admin", dryRun: true })}>Send To Admin<br />(Preview)</Button>
-                            <Button variant="contained" sx={{ backgroundColor: "skyblue" }} disabled onClick={() => sendPushNotification({ pushType: "selected", dryRun: true })}>Send To Selection<br />(Preview)</Button>
-                        </Box>
-                        <Box sx={{ width: "100%", display: "flex", justifyContent: "space-around", alignItems: "center" }}>
-                            <Button variant="contained" sx={{ backgroundColor: "red" }} onClick={() => sendPushNotification({ pushType: "all", dryRun: false })}>Send To All*</Button>
-                            <Button variant="contained" sx={{ backgroundColor: "red" }} onClick={() => sendPushNotification({ pushType: "admin", dryRun: false })}>Send To Admin*</Button>
-                            <Button variant="contained" sx={{ backgroundColor: "red" }} disabled onClick={() => sendPushNotification({ pushType: "selected", dryRun: false })}>Send To Selection*</Button>
-                        </Box>
+                        <Button variant="contained" sx={{ backgroundColor: "skyblue" }} onClick={() => sendPushNotification({ precheck: true })}>Send (Pre-check)</Button>
+                        <Button variant="contained" sx={{ backgroundColor: "red" }} onClick={() => sendPushNotification({ precheck: false })} disabled={!sendAble}>* Send *</Button>
                     </Box>
                 </Box>
                 <Box
