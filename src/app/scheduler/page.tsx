@@ -31,7 +31,18 @@ export default function Scheduler() {
 
     const { targetServer } = React.useContext(Context);
 
-    async function getJobs() {
+    const resetInput = React.useCallback(() => {
+        setSelectedJob(null);
+        setQueueName("");
+        setTriggerType("");
+        setCronPattern("");
+        setDelayTime(null);
+        setJobName("");
+        setMessage("");
+        dataGridRef.current?.selectRow(0, false, true);
+    }, [dataGridRef]);
+
+    const getJobs = React.useCallback(async () => {
         await fetch(`/api/schedule?target=${targetServer}`, {
             method: "GET",
         }).then(async (response) => {
@@ -40,9 +51,9 @@ export default function Scheduler() {
             setJobs(jobs);
             setDataRefreshedAt(Date.now());
         });
-    }
+    }, [targetServer])
 
-    async function addJob() {
+    const addJob = React.useCallback(async () => {
         if (!queueName || !jobName || !jobData) {
             console.error(`Missing required fields: queueName, jobName, and jobData`);
             return;
@@ -82,9 +93,9 @@ export default function Scheduler() {
         }).finally(() => {
             setIsLoading(false);
         });
-    }
+    }, [cronPattern, delayTime, getJobs, jobData, jobName, queueName, resetInput, triggerType, targetServer]);
 
-    async function deleteJob({ queueName, key }: { queueName: string, key: string }) {
+    const deleteJob = React.useCallback(async ({ queueName, key }: { queueName: string, key: string }) => {
         setIsLoading(true);
         fetch(`/api/schedule?target=${targetServer}`, {
             method: "DELETE",
@@ -97,9 +108,9 @@ export default function Scheduler() {
         }).finally(() => {
             setIsLoading(false);
         });
-    }
+    }, [getJobs, targetServer]);
 
-    async function updateJob() {
+    const updateJob = React.useCallback(async () => {
         if (!queueName || !jobName || !jobData) {
             console.error(`Missing required fields: queueName, jobName, and jobData`);
             return;
@@ -146,25 +157,16 @@ export default function Scheduler() {
         }).finally(() => {
             setIsLoading(false);
         });
-    }
+    }, [cronPattern, delayTime, getJobs, jobData, jobName, queueName, selectedJob, triggerType, targetServer]);
 
     React.useEffect(() => {
         setIsLoading(true);
         getJobs().finally(() => {
             setIsLoading(false);
         });
-    }, [targetServer]);
+    }, [getJobs]);
 
-    const resetInput = () => {
-        setSelectedJob(null);
-        setQueueName("");
-        setTriggerType("");
-        setCronPattern("");
-        setDelayTime(null);
-        setJobName("");
-        setMessage("");
-        dataGridRef.current?.selectRow(0, false, true);
-    }
+
 
     const getJobData = React.useCallback((params: GridRenderCellParams | GridRowParams) => {
         const queue = jobs[params.row.queueName];

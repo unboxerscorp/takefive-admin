@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
-import { Box, Drawer, FormControl, InputLabel, List, ListItem, ListItemButton, ListItemIcon, ListItemText, MenuItem, Select } from '@mui/material';
+import { Box, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText } from '@mui/material';
 import ToggleOn from '@mui/icons-material/ToggleOnOutlined';
 import NotificationIcon from '@mui/icons-material/NotificationsOutlined';
 import ScheduleIcon from '@mui/icons-material/ScheduleOutlined';
