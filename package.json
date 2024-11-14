@@ -5,9 +5,10 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start -p 8000",
+    "start": "next start",
     "lint": "next lint",
-    "deploy": "next build && next start -p 33333"
+    "deploy:build": "BUILD=1 next build && rm -rf ./.next && mv ./out ./.next",
+    "deploy:start": "nodemon"
   },
   "dependencies": {
     "@bull-board/express": "^6.3.3",

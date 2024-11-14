@@ -1,0 +1,8 @@
+{
+    "watch": [
+        "./.next"
+    ],
+    "ext": "js json css",
+    "exec": "next start -p 33333",
+    "delay": 1000
+}
