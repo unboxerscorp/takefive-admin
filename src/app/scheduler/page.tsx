@@ -15,7 +15,7 @@ export default function Scheduler() {
     const dataGridRef = useGridApiRef();
     const [jobs, setJobs] = React.useState<Record<string, Record<string, Job[] | RepeatableJob[]>>>({});
     const [columns, setColumns] = React.useState<GridColDef[]>([]);
-    const [rows, setRows] = React.useState<Record<string, any>[]>([]);
+    const [rows, setRows] = React.useState<Record<string, unknown>[]>([]);
     const [isLoading, setIsLoading] = React.useState(false);
     const [dataRefreshedAt, setDataRefreshedAt] = React.useState<number>(0);
     const [delayTime, setDelayTime] = React.useState<Dayjs | null>(null);
@@ -25,8 +25,8 @@ export default function Scheduler() {
     const [cronPattern, setCronPattern] = React.useState<string>("");
     const [jobName, setJobName] = React.useState<string>("");
     const [message, setMessage] = React.useState<string>("");
-    const [jobData, setJobData] = React.useState<any>({});
-    const [selectedJob, setSelectedJob] = React.useState<any>(null);
+    const [jobData, setJobData] = React.useState<Record<string, unknown>>({});
+    const [selectedJob, setSelectedJob] = React.useState<Record<string, unknown> & { key: string } | null>(null);
 
     async function getJobs() {
         await fetch("/api/schedule", {
@@ -46,7 +46,7 @@ export default function Scheduler() {
         }
 
         setIsLoading(true);
-        const requestData: { queueName: string, jobName: string, jobData: any, trigger: Trigger | null } = {
+        const requestData: { queueName: string, jobName: string, jobData: Record<string, unknown>, trigger: Trigger | null } = {
             queueName,
             jobName,
             jobData,
@@ -89,7 +89,7 @@ export default function Scheduler() {
                 queueName: queueName,
                 jobSchedulerId: key
             })
-        }).then(async (response) => {
+        }).then(async () => {
             await getJobs();
         }).finally(() => {
             setIsLoading(false);
@@ -102,8 +102,13 @@ export default function Scheduler() {
             return;
         }
 
+        if (!selectedJob || !selectedJob.key) {
+            console.error(`Missing required field: selectedJob.key`);
+            return;
+        }
+
         setIsLoading(true);
-        const requestData: { key: string, queueName: string, jobName: string, jobData: any, trigger: Trigger | null } = {
+        const requestData: { key: string, queueName: string, jobName: string, jobData: Record<string, unknown>, trigger: Trigger | null } = {
             key: selectedJob.key,
             queueName,
             jobName,
@@ -131,9 +136,9 @@ export default function Scheduler() {
         fetch("/api/schedule", {
             method: "PUT",
             body: JSON.stringify(requestData)
-        }).then(async (_) => {
+        }).then(async () => {
             await wait(10000);
-        }).then(async (_) => {
+        }).then(async () => {
             await getJobs();
         }).finally(() => {
             setIsLoading(false);
@@ -158,7 +163,7 @@ export default function Scheduler() {
         dataGridRef.current?.selectRow(0, false, true);
     }
 
-    const getJobData = (params: GridRenderCellParams | GridRowParams) => {
+    const getJobData = React.useCallback((params: GridRenderCellParams | GridRowParams) => {
         const queue = jobs[params.row.queueName];
         if (queue) {
             const jobs: Job[] = queue.jobs as Job[];
@@ -168,14 +173,14 @@ export default function Scheduler() {
                 return JSON.stringify(jobData, null, 2);
             }
         }
-    }
+    }, [jobs]);
 
     React.useEffect(() => {
         if (Object.values(jobs).length === 0) {
             setRows([]);
             setColumns([]);
         } else {
-            const newRows: Record<string, any>[] = []
+            const newRows: Record<string, unknown>[] = []
             Object.values(jobs).forEach((queueJobs) => {
                 queueJobs.schedulers.forEach((scheduler) => {
                     const { key, next, pattern } = scheduler as RepeatableJob;
@@ -198,7 +203,7 @@ export default function Scheduler() {
                 }
             ]);
         }
-    }, [jobs]);
+    }, [jobs, getJobData]);
 
     React.useEffect(() => {
         let outerTimeoutId: NodeJS.Timeout | null = null;
@@ -233,8 +238,8 @@ export default function Scheduler() {
             try {
                 const messageJson = JSON.parse(message);
                 setJobData(messageJson);
-            } catch (error) {
-                setJobData(null);
+            } catch {
+                setJobData({});
             }
         }
     }, [message])
@@ -318,7 +323,7 @@ export default function Scheduler() {
                             </Select>
                         </FormControl>
                         {triggerType === "repeat" ? <TextField fullWidth label="Cron Pattern" onChange={(e) => {
-                            setCronPattern(e.target.value); 0
+                            setCronPattern(e.target.value);
                         }} value={cronPattern} placeholder='* * * * * *' sx={{ backgroundColor: "white", color: "black" }} /> : triggerType === "delay" ? <DateTimeField fullWidth
                             sx={{ backgroundColor: "white", color: "black" }}
                             format='YYYY-MM-DD HH:mm:ss'
@@ -387,10 +392,4 @@ export default function Scheduler() {
         </Box >
     </LocalizationProvider>
     );
-}
-
-function sleep(ms: number) {
-    return new Promise((resolve) => {
-        setTimeout(resolve, ms);
-    });
 }

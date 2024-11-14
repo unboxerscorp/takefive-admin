@@ -86,7 +86,7 @@ export default function OnlineUsers() {
                                     if (!data || data.length === 0) {
                                         return []
                                     }
-                                    const newRows = currentUserData.map((item: Record<string, any>) => flattenObject({ obj: item })).map((item: Record<string, any>) => ({ ...item, id: +item.user_id }))
+                                    const newRows = currentUserData.map((item: Record<string, unknown>) => flattenObject({ obj: item })).map((item: Record<string, unknown> & { user_id: string }) => ({ ...item, id: +item.user_id }))
                                     console.log(newRows)
                                     return newRows;
                                 }
@@ -111,7 +111,7 @@ export default function OnlineUsers() {
 
     React.useEffect(() => {
         navigator.mediaDevices.getUserMedia({ audio: true }).then(() => {
-            const audioContext = window.AudioContext || (window as any).webkitAudioContext;
+            const audioContext = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
             if (audioContext) {
                 new audioContext();
             } else {

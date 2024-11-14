@@ -1,38 +1,15 @@
 "use client"
 
 import { Box, Button, Card, FormControl, InputLabel, MenuItem, Select, TextField } from '@mui/material';
-import { DataGrid, GridColDef, useGridApiRef } from '@mui/x-data-grid';
 import React from 'react';
-import { setTimeout } from 'timers';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { useSnackbar } from "notistack";
-import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider/LocalizationProvider';
 import dayjs, { Dayjs } from 'dayjs';
 import { DateTimeField } from '@mui/x-date-pickers/DateTimeField';
 import PageTitle from '@/utils/page-title';
-// import dayjs from 'dayjs';
-// import utc from 'dayjs/plugin/utc';
-// import timezone from 'dayjs/plugin/timezone';
-
-// dayjs.extend(utc);
-// dayjs.extend(timezone);
-
-function chunkArray<T>(array: T[], size: number): T[][] {
-    const chunks: T[][] = [];
-    for (let i = 0; i < array.length; i += size) {
-        chunks.push(array.slice(i, i + size));
-    }
-    return chunks;
-}
 
 export default function PushNotification() {
-    const dataGridRef = useGridApiRef();
-    const [columns, setColumns] = React.useState<GridColDef[]>([]);
-    const [rows, setRows] = React.useState<Record<string, any>[]>([]);
-    const [updatedAt, setUpdatedAt] = React.useState<number | null>(null);
-    const [isLoading, setIsLoading] = React.useState(false);
-
     const [title, setTitle] = React.useState<string>("");
     const [message, setMessage] = React.useState<string>("");
     const [target, setTarget] = React.useState<string>("");
@@ -41,49 +18,6 @@ export default function PushNotification() {
     const [delayTime, setDelayTime] = React.useState<Dayjs | null>(null);
     const [sendAble, setSendAble] = React.useState<boolean>(false);
     const { enqueueSnackbar } = useSnackbar();
-
-    // const fetchData = React.useCallback(() => {
-    //     setIsLoading(true);
-    //     fetch(`/api/redis?${new URLSearchParams({ key: "preload_data:push_tokens" }).toString()}`, {
-    //         method: "GET"
-    //     })
-    //         .then((res) => res.json())
-    //         .catch((err) => {
-    //             console.error(err);
-    //             return { data: {} }
-    //         })
-    //         .then(({ data }) => {
-    //             const values = Object.values(data)
-    //             const value: { data: [{ user_id: number, token: string }], updated_at: number } | undefined = values.shift() as any;
-    //             return value;
-    //         })
-    //         .then((value) => {
-    //             setIsLoading(false);
-    //             if (!value) {
-    //                 return;
-    //             }
-    //             const { data: pushTokens, updated_at: updatedAt } = value;
-    //             setUpdatedAt(updatedAt);
-    //             ReactDOM.flushSync(() => {
-    //                 setColumns([
-    //                     { field: "user_id", flex: 1, headerName: "User ID", align: "center", headerAlign: "center" },
-    //                     { field: "token", headerName: "Push Token", align: "center", headerAlign: "center" }
-    //                 ]);
-    //                 if (pushTokens !== rows) {
-    //                     setRows(pushTokens);
-    //                 }
-    //             })
-    //         }).then(() => sleep(0)).then(() => {
-    //             dataGridRef.current.autosizeColumns({
-    //                 includeHeaders: true,
-    //                 includeOutliers: true,
-    //             })
-    //         });
-    // }, [dataGridRef, rows]);
-
-    // React.useEffect(() => {
-    //     // fetchData();
-    // }, [fetchData]);
 
     async function sendNotificationJob() {
         const queueName = "notificationQueue";
@@ -95,9 +29,7 @@ export default function PushNotification() {
             dryRun: false,
         };
 
-        setIsLoading(true);
-
-        const requestData: { queueName: string, jobName: string, jobData: any, trigger: Trigger | null } = {
+        const requestData: { queueName: string, jobName: string, jobData: Record<string, unknown>, trigger: Trigger | null } = {
             queueName,
             jobName,
             jobData,
@@ -125,10 +57,7 @@ export default function PushNotification() {
         }).then(async (response) => {
             if (response.ok) {
                 resetInput();
-                // await getJobs();
             }
-        }).finally(() => {
-            setIsLoading(false);
         });
     }
 
@@ -150,11 +79,6 @@ export default function PushNotification() {
 
     }) => {
         const userIds: number[] = [];
-
-        dataGridRef.current.getSelectedRows().forEach((row: any) => {
-            const { user_id } = row;
-            userIds.push(user_id);
-        });
 
         if (userIds.length === 0) {
             enqueueSnackbar("Please select at least one user", { variant: "warning" });
@@ -414,7 +338,7 @@ export default function PushNotification() {
                             </Select>
                         </FormControl>
                         {triggerType === "repeat" ? <TextField fullWidth label="Cron Pattern" onChange={(e) => {
-                            setCronPattern(e.target.value); 0
+                            setCronPattern(e.target.value);
                             setSendAble(false);
                         }} value={cronPattern} placeholder='* * * * * *' sx={{ backgroundColor: "white", color: "black" }} /> : triggerType === "delay" ? <DateTimeField
                             sx={{ backgroundColor: "white", color: "black" }}
@@ -445,46 +369,8 @@ export default function PushNotification() {
                         <Button variant="contained" sx={{ backgroundColor: "red" }} onClick={() => sendPushNotification({ precheck: false })} disabled={!sendAble}>* Send *</Button>
                     </Box>
                 </Box>
-                <Box
-                    flex={4}
-                    display="flex"
-                    alignItems="center"
-                    justifyContent="center"
-                    sx={{
-                        border: "10px solid #cccccc33",
-                        borderRadius: "8px",
-                        width: "100%",
-                        height: "100%",
-                        boxSizing: "border-box",
-                        overflowY: "auto"
-                    }}
-                >
-                    <DataGrid
-                        apiRef={dataGridRef}
-                        rows={rows}
-                        columns={columns}
-                        sx={{ border: 0 }}
-                        getRowId={(row) => row.user_id}
-                        checkboxSelection
-                        sortModel={[{ field: "user_id", sort: "asc" }]}
-                        initialState={{
-                            columns: {
-                                columnVisibilityModel: {
-                                    token: false
-                                }
-                            }
-                        }}
-                        loading={isLoading}
-                    />
-                </Box>
             </Box>
         </Box>
     </LocalizationProvider>
     );
-}
-
-function sleep(ms: number) {
-    return new Promise((resolve) => {
-        setTimeout(resolve, ms);
-    });
 }

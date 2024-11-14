@@ -11,6 +11,6 @@ export async function GET() {
             headers: { 'Content-Type': 'text/html' },
         });
     } catch (error) {
-        return new NextResponse('Failed to load Bull Board', { status: 500 });
+        return new NextResponse(JSON.stringify({ message: 'Failed to load Bull Board', error }), { status: 500, });
     }
 }

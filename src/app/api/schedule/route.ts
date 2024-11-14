@@ -3,7 +3,7 @@ import queues from './queues';
 import { Job, RepeatableJob } from 'bullmq';
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
-    const { queueName, jobName, jobData, trigger }: { queueName: string, jobName: string, jobData: any, trigger: Trigger } = await req.json();
+    const { queueName, jobName, jobData, trigger }: { queueName: string, jobName: string, jobData: Record<string, unknown>, trigger: Trigger } = await req.json();
 
     if (!queueName || !jobName || !jobData || !trigger) {
         return NextResponse.json(
@@ -93,7 +93,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 }
 
 export async function PUT(req: NextRequest): Promise<NextResponse> {
-    const { key: jobId, queueName, jobName, jobData, trigger }: { key: string, queueName: string, jobName: string, jobData: any, trigger: Trigger } = await req.json();
+    const { key: jobId, queueName, jobName, jobData, trigger }: { key: string, queueName: string, jobName: string, jobData: Record<string, unknown>, trigger: Trigger } = await req.json();
 
     if (!jobId || !queueName || !jobName || !jobData || !trigger) {
         return NextResponse.json(
