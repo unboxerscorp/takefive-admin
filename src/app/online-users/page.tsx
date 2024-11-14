@@ -62,7 +62,8 @@ export default function OnlineUsers() {
         const socket = io(socketServerUrl + "/admin", {
             auth: {
                 token: "djsqkrtjwm!1932"
-            }
+            },
+            transports: ["websocket"]
         });
 
         socket.on("connect", () => {
