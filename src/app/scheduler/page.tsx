@@ -47,7 +47,7 @@ export default function Scheduler() {
             method: "GET",
         }).then(async (response) => {
             const { jobs } = await response.json();
-            console.log(jobs)
+            // console.log(jobs)
             setJobs(jobs);
             setDataRefreshedAt(Date.now());
         });

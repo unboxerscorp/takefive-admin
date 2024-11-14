@@ -5,6 +5,7 @@ import PageTitle from '@/utils/page-title';
 import { Avatar, Box } from '@mui/material';
 import { DataGrid, GridColDef, useGridApiRef } from '@mui/x-data-grid';
 import React from 'react';
+import { flushSync } from 'react-dom';
 import { io } from 'socket.io-client';
 import { setTimeout } from 'timers';
 
@@ -70,7 +71,7 @@ export default function OnlineUsers() {
         });
 
         socket.on("system", (args) => {
-            console.log(args);
+            // console.log(args);
             if (!args) {
                 return;
             }
@@ -81,16 +82,18 @@ export default function OnlineUsers() {
                     if (data) {
                         const { currentUserData } = data;
                         if (currentUserData) {
-                            setRows((rows) => {
-                                if (!areSetsEqual(currentUserData, rows)) {
-                                    if (!data || data.length === 0) {
-                                        return []
+                            flushSync(() => {
+                                setRows((rows) => {
+                                    if (!areSetsEqual(currentUserData, rows)) {
+                                        if (!data || data.length === 0) {
+                                            return []
+                                        }
+                                        const newRows = currentUserData.map((item: Record<string, unknown>) => flattenObject({ obj: item })).map((item: Record<string, unknown> & { user_id: string }) => ({ ...item, id: +item.user_id }))
+                                        // console.log(newRows)
+                                        return newRows;
                                     }
-                                    const newRows = currentUserData.map((item: Record<string, unknown>) => flattenObject({ obj: item })).map((item: Record<string, unknown> & { user_id: string }) => ({ ...item, id: +item.user_id }))
-                                    console.log(newRows)
-                                    return newRows;
-                                }
-                                return rows
+                                    return rows
+                                })
                             })
                         }
                     }
@@ -121,6 +124,30 @@ export default function OnlineUsers() {
         }).catch(e => {
             console.error(`Audio permissions denied: ${e}`);
         });
+
+        setColumns([
+            { field: "id", headerName: "ID", align: "center", headerAlign: "center", width: 1 },
+            { field: "user_preference_nickname", headerName: "Name", align: "center", headerAlign: "center", width: 1 },
+            { field: "user_isAdmin", headerName: "Admin", align: "center", headerAlign: "center", renderCell: (params) => <span style={{ backgroundColor: params.value === "false" ? "gold" : "white", padding: "0.5rem" }} >{params.value}</span>, width: 1 },
+            { field: "userStatus_queueStatus", headerName: "Queue", align: "center", headerAlign: "center", width: 1 },
+            { field: "userStatus_sessionStatus", headerName: "Session", align: "center", headerAlign: "center", renderCell: (params) => <span style={{ color: params.row.user_isAdmin === "false" ? params.value === "waiting" ? "red" : params.value === "idle" ? "orange" : "black" : "gray" }} >{params.value}</span>, width: 1 },
+            {
+                field: "user_preference_profileImage", headerName: "Profile", align: "center", headerAlign: "center", renderCell: (params) =>
+                    <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", width: "100%", height: "100%" }}><Avatar style={{ width: 40, height: 40 }} src={params.value} /></Box>, width: 1
+            },
+            { field: "user_preference_regionCode", headerName: "Region", align: "center", headerAlign: "center", width: 1 },
+            { field: "user_preference_languageCode", headerName: "Language", align: "center", headerAlign: "center", width: 1 },
+            { field: "user_preference_level", headerName: "Level", align: "center", headerAlign: "center", width: 1 },
+            { field: "user_preference_gender", headerName: "Gender", align: "center", headerAlign: "center", width: 1 },
+            {
+                field: "user_lastMatchedWith", headerName: "Last Match", align: "center", headerAlign: "center", valueGetter: (value) => JSON.parse(value).join(" "), renderCell: (params) => <span style={{ padding: "0.5rem" }} >[{params.value}]</span>, width: 1
+            },
+            { field: "userStatus_sessionInfo_batchId", headerName: "Batch", align: "center", headerAlign: "center", renderCell: (params) => <span style={{ padding: "0.5rem", backgroundColor: stringToHexColor(params.value) }} >{params.value ? params.value : "-"}</span>, width: 1 },
+            { field: "userStatus_sessionInfo_sessionName", headerName: "Session", align: "center", headerAlign: "center", renderCell: (params) => <span style={{ padding: "0.5rem", backgroundColor: stringToHexColor(params.value) }} >{params.value ? params.value : "-"}</span>, width: 1 },
+            { field: "userStatus_sessionInfo_sessionInfo_timetable_startTime", headerName: "Session start at", align: "center", headerAlign: "center", valueFormatter: (value) => value ? new Date(value).toLocaleString("ko-KR") : "-", width: 1 },
+            { field: "userStatus_sessionInfo_sessionInfo_timetable_endTime", headerName: "Session end at", align: "center", headerAlign: "center", valueFormatter: (value) => value ? new Date(value).toLocaleString("ko-KR") : "-", width: 1 },
+            { field: "user_createdAt", headerName: "Created at", align: "center", headerAlign: "center", valueFormatter: (value) => value ? new Date(value).toLocaleString("ko-KR") : "-", width: 1 },
+        ]);
     }, []);
 
     React.useEffect(() => {
@@ -139,40 +166,16 @@ export default function OnlineUsers() {
         const isDecreased = removedItems.length > 0 && !removedItems.every(item => item.isAdmin);
 
         if (isIncreased && isDecreased) {
-            addSound.play();
+            addSound.play().catch(() => { });
         } else if (isIncreased) {
-            addSound.play();
+            addSound.play().catch(() => { });
         } else if (isDecreased) {
-            removeSound.play();
+            removeSound.play().catch(() => { });
         }
 
         prevRowsRef.current = rows;
 
         if (rows.length > 0) {
-            setColumns([
-                { field: "id", headerName: "ID", align: "center", headerAlign: "center" },
-                { field: "user_preference_nickname", headerName: "Name", align: "center", headerAlign: "center" },
-                { field: "user_isAdmin", headerName: "Admin", align: "center", headerAlign: "center", renderCell: (params) => <span style={{ backgroundColor: params.value === "false" ? "gold" : "white", padding: "0.5rem" }} >{params.value}</span> },
-                { field: "userStatus_queueStatus", headerName: "Queue", align: "center", headerAlign: "center" },
-                { field: "userStatus_sessionStatus", headerName: "Session", align: "center", headerAlign: "center", renderCell: (params) => <span style={{ color: params.row.user_isAdmin === "false" ? params.value === "waiting" ? "red" : params.value === "idle" ? "orange" : "black" : "gray" }} >{params.value}</span> },
-                {
-                    field: "user_preference_profileImage", headerName: "Profile", align: "center", headerAlign: "center", renderCell: (params) =>
-                        <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", width: "100%", height: "100%" }}><Avatar style={{ width: 40, height: 40 }} src={params.value} /></Box>
-                },
-                { field: "user_preference_regionCode", headerName: "Region", align: "center", headerAlign: "center" },
-                { field: "user_preference_languageCode", headerName: "Language", align: "center", headerAlign: "center" },
-                { field: "user_preference_level", headerName: "Level", align: "center", headerAlign: "center" },
-                { field: "user_preference_gender", headerName: "Gender", align: "center", headerAlign: "center" },
-                {
-                    field: "user_lastMatchedWith", headerName: "Last Match", align: "center", headerAlign: "center", valueGetter: (value) => JSON.parse(value).join(" "), renderCell: (params) => <span style={{ padding: "0.5rem" }} >[{params.value}]</span>
-                },
-                { field: "userStatus_sessionInfo_batchId", headerName: "Batch", align: "center", headerAlign: "center", renderCell: (params) => <span style={{ padding: "0.5rem", backgroundColor: stringToHexColor(params.value) }} >{params.value ? params.value : "-"}</span> },
-                { field: "userStatus_sessionInfo_sessionName", headerName: "Session", align: "center", headerAlign: "center", renderCell: (params) => <span style={{ padding: "0.5rem", backgroundColor: stringToHexColor(params.value) }} >{params.value ? params.value : "-"}</span> },
-                { field: "userStatus_sessionInfo_sessionInfo_timetable_startTime", headerName: "Session start at", align: "center", headerAlign: "center", valueFormatter: (value) => value ? new Date(value).toLocaleString("ko-KR") : "-" },
-                { field: "userStatus_sessionInfo_sessionInfo_timetable_endTime", headerName: "Session end at", align: "center", headerAlign: "center", valueFormatter: (value) => value ? new Date(value).toLocaleString("ko-KR") : "-" },
-                { field: "user_createdAt", headerName: "Created at", align: "center", headerAlign: "center", valueFormatter: (value) => value ? new Date(value).toLocaleString("ko-KR") : "-" },
-            ]);
-
             let outerTimeoutId: NodeJS.Timeout | null = null;
             let innerTimeoutId: NodeJS.Timeout | null = null;
 
@@ -199,14 +202,12 @@ export default function OnlineUsers() {
 
         } else {
             setIsLoading(false);
-            setColumns([]);
+            // setColumns([]);
         }
     }, [rows, dataGridRef]);
 
-
-
     return (
-        <Box sx={{ height: '100%', width: '100%', background: "white", display: "flex", flexDirection: "column", rowGap: 5 }}>
+        <Box sx={{ background: "white", display: "flex", flexDirection: "column", rowGap: 5 }}>
             <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <PageTitle title="Online Users" />
                 <span style={{ display: "flex", alignItems: "center", columnGap: "0.2rem" }}>
@@ -214,7 +215,7 @@ export default function OnlineUsers() {
                     <StatusDot socketConnected={socketConnected} />
                 </span>
             </Box>
-            <Box sx={{
+            <Box key={`${rows.length}`} sx={{
                 border: "10px solid #cccccc33",
                 borderRadius: "8px",
                 height: "100%",
