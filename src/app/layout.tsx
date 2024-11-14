@@ -1,13 +1,15 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
-import { Box, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText } from '@mui/material';
+import { Box, Drawer, FormControl, InputLabel, List, ListItem, ListItemButton, ListItemIcon, ListItemText, MenuItem, Select } from '@mui/material';
 import ToggleOn from '@mui/icons-material/ToggleOnOutlined';
 import NotificationIcon from '@mui/icons-material/NotificationsOutlined';
 import ScheduleIcon from '@mui/icons-material/ScheduleOutlined';
 import BullIcon from '@mui/icons-material/AdsClick';
 import { headers } from "next/headers";
 import SnackbarWrapper from "@/utils/snackbar-wrapper";
+import { ContextWrapper } from "@/misc/context";
+import React from "react";
 
 const pretendard = localFont({
   src: './fonts/PretendardVariable.woff2',
@@ -30,6 +32,7 @@ export default async function RootLayout({
 }>) {
   const requestHeaders = await headers();
   const pathName = requestHeaders.get("x-pathname") || "/";
+
   return (
     <html lang="en">
       <body
@@ -84,15 +87,17 @@ export default async function RootLayout({
                 </ListItem>
               </List>
             </Drawer>
-            <Box
-              component="main"
-              sx={{ flexGrow: 1, bgcolor: 'background.default', p: ["/bullboard"].includes(pathName) ? 0 : 8, width: `calc(100% - ${drawerWidth}px)`, height: '100vh' }}
-            >
-              {children}
-            </Box>
+            <ContextWrapper>
+              <Box
+                component="main"
+                sx={{ flexGrow: 1, bgcolor: 'background.default', p: ["/bullboard"].includes(pathName) ? 0 : 8, width: "100%", height: '100%' }}
+              >
+                {children}
+              </Box>
+            </ContextWrapper>
           </Box>
         </SnackbarWrapper>
       </body>
-    </html>
+    </html >
   );
 }

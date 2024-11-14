@@ -1,10 +1,15 @@
+"use client"
+
+import { Context } from '@/misc/context';
 import React from 'react';
 
 const BullBoardPage = () => {
+    const { targetServer } = React.useContext(Context)
+
     return (
-        <div style={{ width: '100%', height: '100vh' }}>
+        <div style={{ width: '100%', height: '100%' }}>
             <iframe
-                src="https://scheduler.takefive.now/bull-board" // Bull Board 서버의 공개 URL로 변경
+                src={targetServer === "prod" ? "https://scheduler.takefive.now/bull-board" : "https://3by276omgkovs6le.l.tunwg.com/bull-board"}
                 style={{ width: '100%', height: '100%', border: 'none' }}
                 title="Bull Board"
             />

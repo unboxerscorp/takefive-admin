@@ -6,7 +6,12 @@ export async function GET(request: Request) {
     if (!key) {
         return Response.json({ error: "No key provided" }, { status: 400 });
     }
-    const redis = await getRedisClient();
+
+    const target = searchParams.get("target");
+    if (!target || (target !== "prod" && target !== "dev")) {
+        return Response.json({ error: "No target provided" }, { status: 400 });
+    }
+    const redis = await getRedisClient({ target });
     const keys = await redis.keys(key);
     const data = Object.create(null);
     for (const key of keys) {
@@ -24,7 +29,12 @@ export async function POST(request: Request) {
     if (!key) {
         return Response.json({ error: "No key provided" }, { status: 400 });
     }
-    const redis = await getRedisClient();
+
+    const target = searchParams.get("target");
+    if (!target || (target !== "prod" && target !== "dev")) {
+        return Response.json({ error: "No target provided" }, { status: 400 });
+    }
+    const redis = await getRedisClient({ target });
     const body = await request.json();
     await redis.set(key, JSON.stringify(body));
     return Response.json({ success: true })

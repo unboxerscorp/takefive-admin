@@ -1,5 +1,6 @@
 "use client"
 
+import { Context } from '@/misc/context';
 import PageTitle from '@/utils/page-title';
 import { Box, Button, ButtonGroup, Card, FormControl, InputLabel, MenuItem, Select, TextField } from '@mui/material';
 import { DataGrid, GridColDef, GridRenderCellParams, GridRowParams, useGridApiRef } from '@mui/x-data-grid';
@@ -28,8 +29,10 @@ export default function Scheduler() {
     const [jobData, setJobData] = React.useState<Record<string, unknown>>({});
     const [selectedJob, setSelectedJob] = React.useState<Record<string, unknown> & { key: string } | null>(null);
 
+    const { targetServer } = React.useContext(Context);
+
     async function getJobs() {
-        await fetch("/api/schedule", {
+        await fetch(`/api/schedule?target=${targetServer}`, {
             method: "GET",
         }).then(async (response) => {
             const { jobs } = await response.json();
@@ -68,7 +71,7 @@ export default function Scheduler() {
                 type: "now"
             }
         }
-        await fetch("/api/schedule", {
+        await fetch(`/api/schedule?target=${targetServer}`, {
             method: "POST",
             body: JSON.stringify(requestData)
         }).then(async (response) => {
@@ -83,7 +86,7 @@ export default function Scheduler() {
 
     async function deleteJob({ queueName, key }: { queueName: string, key: string }) {
         setIsLoading(true);
-        fetch("/api/schedule", {
+        fetch(`/api/schedule?target=${targetServer}`, {
             method: "DELETE",
             body: JSON.stringify({
                 queueName: queueName,
@@ -133,7 +136,7 @@ export default function Scheduler() {
         }
 
         setIsLoading(true);
-        fetch("/api/schedule", {
+        fetch(`/api/schedule?target=${targetServer}`, {
             method: "PUT",
             body: JSON.stringify(requestData)
         }).then(async () => {
@@ -150,7 +153,7 @@ export default function Scheduler() {
         getJobs().finally(() => {
             setIsLoading(false);
         });
-    }, []);
+    }, [targetServer]);
 
     const resetInput = () => {
         setSelectedJob(null);

@@ -1,5 +1,6 @@
 "use client"
 
+import { Context } from '@/misc/context';
 import PageTitle from '@/utils/page-title';
 import { Avatar, Box } from '@mui/material';
 import { DataGrid, GridColDef, useGridApiRef } from '@mui/x-data-grid';
@@ -45,9 +46,6 @@ function flattenObject({ obj, result = {} }: { obj: Record<string, unknown> | ob
     return result;
 }
 
-const socketServerUrl = "https://socket.takefive.now"
-// const socketServerUrl = "http://192.168.1.43:3000"
-
 export default function OnlineUsers() {
     const dataGridRef = useGridApiRef();
     const [isLoading, setIsLoading] = React.useState(false);
@@ -55,10 +53,11 @@ export default function OnlineUsers() {
     const [rows, setRows] = React.useState<Record<string, unknown>[]>([]);
     const prevRowsRef = React.useRef(rows);
     const [socketConnected, setSocketConnected] = React.useState(false);
-
-
+    const { targetServer } = React.useContext(Context);
 
     React.useEffect(() => {
+        const socketServerUrl = targetServer === "prod" ? "https://socket.takefive.now" : "https://dev.socket.takefive.now";
+
         const socket = io(socketServerUrl + "/admin", {
             auth: {
                 token: "djsqkrtjwm!1932"
@@ -66,6 +65,7 @@ export default function OnlineUsers() {
         });
 
         socket.on("connect", () => {
+            setIsLoading(true);
             setSocketConnected(true);
         });
 
@@ -101,13 +101,14 @@ export default function OnlineUsers() {
         });
 
         socket.on("disconnect", () => {
+            setIsLoading(false);
             setSocketConnected(false);
         });
 
         return () => {
             socket.disconnect();
         };
-    }, []);
+    }, [targetServer]);
 
     React.useEffect(() => {
         navigator.mediaDevices.getUserMedia({ audio: true }).then(() => {
@@ -197,6 +198,7 @@ export default function OnlineUsers() {
             };
 
         } else {
+            setIsLoading(false);
             setColumns([]);
         }
     }, [rows, dataGridRef]);

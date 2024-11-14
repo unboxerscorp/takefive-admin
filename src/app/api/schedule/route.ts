@@ -1,8 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
-import queues from './queues';
+import { getQueues } from './queues';
 import { Job, RepeatableJob } from 'bullmq';
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
+    const target = req.nextUrl.searchParams.get("target");
+    if (!target || (target !== "prod" && target !== "dev")) {
+        return NextResponse.json(
+            { message: 'No target provided' },
+            { status: 400 }
+        );
+    }
+    const queues = await getQueues({ target });
     const { queueName, jobName, jobData, trigger }: { queueName: string, jobName: string, jobData: Record<string, unknown>, trigger: Trigger } = await req.json();
 
     if (!queueName || !jobName || !jobData || !trigger) {
@@ -93,6 +101,14 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 }
 
 export async function PUT(req: NextRequest): Promise<NextResponse> {
+    const target = req.nextUrl.searchParams.get("target");
+    if (!target || (target !== "prod" && target !== "dev")) {
+        return NextResponse.json(
+            { message: 'No target provided' },
+            { status: 400 }
+        );
+    }
+    const queues = await getQueues({ target });
     const { key: jobId, queueName, jobName, jobData, trigger }: { key: string, queueName: string, jobName: string, jobData: Record<string, unknown>, trigger: Trigger } = await req.json();
 
     if (!jobId || !queueName || !jobName || !jobData || !trigger) {
@@ -184,6 +200,14 @@ export async function PUT(req: NextRequest): Promise<NextResponse> {
 }
 
 export async function DELETE(req: NextRequest): Promise<NextResponse> {
+    const target = req.nextUrl.searchParams.get("target");
+    if (!target || (target !== "prod" && target !== "dev")) {
+        return NextResponse.json(
+            { message: 'No target provided' },
+            { status: 400 }
+        );
+    }
+    const queues = await getQueues({ target });
     const { queueName, jobSchedulerId }: { queueName: string, jobSchedulerId: string } = await req.json();
 
     if (!queueName || !jobSchedulerId) {
@@ -216,7 +240,16 @@ export async function DELETE(req: NextRequest): Promise<NextResponse> {
     }
 }
 
-export async function GET(): Promise<NextResponse> {
+export async function GET(req: NextRequest): Promise<NextResponse> {
+    const target = req.nextUrl.searchParams.get("target");
+    if (!target || (target !== "prod" && target !== "dev")) {
+        return NextResponse.json(
+            { message: 'No target provided' },
+            { status: 400 }
+        );
+    }
+    const queues = await getQueues({ target });
+
     const jobs: Record<string, Record<string, Job[] | RepeatableJob[]>> = {};
     for (const queueName in queues) {
         const queue = queues[queueName];

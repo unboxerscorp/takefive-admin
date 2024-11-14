@@ -2,15 +2,14 @@ import getLogger from "@/misc/logger";
 import Redis from "ioredis";
 import { createTunnel } from "tunnel-ssh";
 
-const ENVIRONMENT = process.env.ENVIRONMENT || "dev";
-const REDIS_HOST = ENVIRONMENT === "prod" ? "takefive-prod-redis-cluster.j5krht.ng.0001.apn2.cache.amazonaws.com" : "localhost";
-const REDIS_PORT = ENVIRONMENT === "prod" ? 6379 : 36379;
-
 if (!global.sshTunnelServer) {
     global.sshTunnelServer = null;
 }
 if (!global.redisClient) {
-    global.redisClient = null;
+    global.redisClient = {
+        "prod": null,
+        "dev": null
+    }
 }
 
 const SSH_PRIVATE_KEY = process.env.SSH_PRIVATE_KEY?.replaceAll(/\\n/g, '\n');
@@ -28,8 +27,8 @@ async function createSshTunnelServer({ port }: { port: number }) {
             readyTimeout: 10000,
         },
         {
-            dstAddr: REDIS_HOST,
-            dstPort: REDIS_PORT,
+            dstAddr: "takefive-prod-redis-cluster.j5krht.ng.0001.apn2.cache.amazonaws.com",
+            dstPort: 6379,
         }
     );
 
@@ -68,17 +67,17 @@ function createRedisClient({ label, port }: { label: string, port: number }): Re
     return redis;
 }
 
-export const getRedisClient = async (): Promise<Redis> => {
-    const randomPort = Math.floor(Math.random() * 10000) + 30000;
-    if (!global.sshTunnelServer && ENVIRONMENT !== "prod") {
+export const getRedisClient = async ({ target }: { target: "prod" | "dev" }): Promise<Redis> => {
+    const port = target === "prod" ? Math.floor(Math.random() * 10000) + 20000 : 36379;
+    if (target === "prod" && !global.sshTunnelServer) {
         try {
-            await createSshTunnelServer({ port: randomPort });
+            await createSshTunnelServer({ port: port });
         } catch (error) {
             console.error("Error creating SSH tunnel server:", error);
         }
     }
-    if (!global.redisClient) {
-        global.redisClient = createRedisClient({ label: "takefive-redis", port: randomPort });
+    if (!global.redisClient[target]) {
+        global.redisClient[target] = createRedisClient({ label: "takefive-redis", port: port });
     }
-    return global.redisClient;
+    return global.redisClient[target];
 }

@@ -8,6 +8,7 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider/L
 import dayjs, { Dayjs } from 'dayjs';
 import { DateTimeField } from '@mui/x-date-pickers/DateTimeField';
 import PageTitle from '@/utils/page-title';
+import { Context } from '@/misc/context';
 
 export default function PushNotification() {
     const [title, setTitle] = React.useState<string>("");
@@ -18,6 +19,7 @@ export default function PushNotification() {
     const [delayTime, setDelayTime] = React.useState<Dayjs | null>(null);
     const [sendAble, setSendAble] = React.useState<boolean>(false);
     const { enqueueSnackbar } = useSnackbar();
+    const { targetServer } = React.useContext(Context);
 
     async function sendNotificationJob() {
         const queueName = "notificationQueue";
@@ -51,9 +53,10 @@ export default function PushNotification() {
                 type: "now"
             }
         }
-        await fetch("/api/schedule", {
+        await fetch(`/api/schedule?target=${targetServer}`, {
             method: "POST",
-            body: JSON.stringify(requestData)
+            body: JSON.stringify(requestData),
+
         }).then(async (response) => {
             if (response.ok) {
                 resetInput();
@@ -249,19 +252,6 @@ export default function PushNotification() {
             }
         }
     }
-
-    // const callLambda = async () => {
-    //     const res = await fetch('/api/call-lambda', {
-    //         method: 'POST',
-    //     });
-    //     const data = await res.json();
-    //     if (res.status === 200) {
-    //         console.log(data);
-    //         fetchData();
-    //     } else {
-    //         console.error(data);
-    //     }
-    // };
 
     return (<LocalizationProvider dateAdapter={AdapterDayjs}>
         <Box sx={{ height: '100%', width: '100%', background: "white", display: "flex", flexDirection: "column", rowGap: 5 }}>
