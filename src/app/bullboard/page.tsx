@@ -9,7 +9,7 @@ const BullBoardPage = () => {
     return (
         <div style={{ width: '100%', height: '100%' }}>
             <iframe
-                src={targetServer === "prod" ? "https://scheduler.takefive.now/bull-board" : "https://3by276omgkovs6le.l.tunwg.com/bull-board"}
+                src={targetServer === "prod" ? "https://scheduler.takefive.now/bull-board" : "https://dev.scheduler.takefive.now/bull-board"}
                 style={{ width: '100%', height: '100%', border: 'none' }}
                 title="Bull Board"
             />
