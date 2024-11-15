@@ -43,7 +43,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         );
     }
 
-    const jobId = `${queueName}:${jobName}:${trigger.type}` + (trigger.type === "now" ? `:${new Date().getTime()}` : "");
+    const jobId = `${queueName}:${jobName}:${trigger.type}` + (trigger.type === "now" ? `:${new Date().getTime()}` : trigger.data ? `:${trigger.data}` : "");
 
     try {
         switch (trigger.type) {
