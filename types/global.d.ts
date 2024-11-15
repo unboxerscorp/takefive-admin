@@ -1,3 +1,4 @@
+/* eslint-disable no-var */
 import { Server } from 'net';
 
 declare global {
@@ -7,7 +8,7 @@ declare global {
     type TriggerDataType = "repeat" | "delay" | "now";
     type Trigger = {
         type: TriggerDataType;
-        data?: any;
+        data?: unknown;
     };
 }
 

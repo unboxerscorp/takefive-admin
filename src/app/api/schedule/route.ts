@@ -54,7 +54,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
                         { status: 400 }
                     );
                 }
-                const cronTrigger: string = trigger.data;
+                const cronTrigger: string = trigger.data as string;
                 await queue.upsertJobScheduler(jobId, { pattern: cronTrigger }, {
                     name: jobName,
                     data: requestData,
@@ -67,7 +67,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
                         { status: 400 }
                     );
                 }
-                const delayTrigger: Date = new Date(trigger.data);
+                const delayTrigger: Date = new Date(trigger.data as number);
                 const delay = delayTrigger.getTime() - Date.now();
                 if (delay <= 0) {
                     return NextResponse.json(
@@ -151,7 +151,7 @@ export async function PUT(req: NextRequest): Promise<NextResponse> {
                         { status: 400 }
                     );
                 }
-                const cronTrigger: string = trigger.data;
+                const cronTrigger: string = trigger.data as string;
                 await queue.upsertJobScheduler(jobId, { pattern: cronTrigger }, {
                     name: jobName,
                     data: requestData,
@@ -164,7 +164,7 @@ export async function PUT(req: NextRequest): Promise<NextResponse> {
                         { status: 400 }
                     );
                 }
-                const delayTrigger: Date = new Date(trigger.data);
+                const delayTrigger: Date = new Date(trigger.data as number);
                 const delay = delayTrigger.getTime() - Date.now();
                 if (delay <= 0) {
                     return NextResponse.json(
