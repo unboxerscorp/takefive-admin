@@ -2,19 +2,15 @@ import getLogger from "@/misc/logger";
 import Redis from "ioredis";
 import { createTunnel } from "tunnel-ssh";
 
-if (!global.sshTunnelServer) {
-    global.sshTunnelServer = null;
-}
-if (!global.redisClient) {
-    global.redisClient = {
-        "prod": null,
-        "dev": null
-    }
-}
-
 const SSH_PRIVATE_KEY = process.env.SSH_PRIVATE_KEY?.replaceAll(/\\n/g, '\n');
 
 async function createSshTunnelServer({ port }: { port: number }) {
+    if (global.sshTunnelServer) {
+        try {
+            global.sshTunnelServer.close();
+        } catch {}
+    }
+
     const [server] = await createTunnel(
         { autoClose: false },
         { port: port },
@@ -67,17 +63,16 @@ function createRedisClient({ label, port }: { label: string, port: number }): Re
     return redis;
 }
 
-export const getRedisClient = async ({ target }: { target: "prod" | "dev" }): Promise<Redis> => {
-    const port = target === "prod" ? Math.floor(Math.random() * 10000) + 20000 : 36379;
-    if (target === "prod" && !global.sshTunnelServer) {
+export const getRedisClient = async ({ target }: { target: "prod" | "dev" }): Promise<Redis | undefined> => {
+    const port = target === "prod" ? 26379 : 36379;
+    if (target === "prod") {
         try {
             await createSshTunnelServer({ port: port });
+            return createRedisClient({ label: "takefive-redis", port: port });
         } catch (error) {
             console.error("Error creating SSH tunnel server:", error);
         }
+    } else {
+        return createRedisClient({ label: "takefive-redis", port: port });
     }
-    if (!global.redisClient[target]) {
-        global.redisClient[target] = createRedisClient({ label: "takefive-redis", port: port });
-    }
-    return global.redisClient[target];
 }

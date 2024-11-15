@@ -2,8 +2,12 @@ import { getRedisClient } from '@/misc/redis';
 import { Queue } from 'bullmq';
 
 const getQueues = async ({ target }: { target: "prod" | "dev" }) => {
+    const redis = await getRedisClient({ target })
+    if (!redis) {
+        throw new Error("Redis connection failed");
+    }
     const queueOptions = {
-        connection: await getRedisClient({ target }),
+        connection: redis,
         defaultJobOptions: {
             removeOnComplete: { count: 100, age: 60 * 60 * 24 },
             removeOnFail: { count: 100, age: 60 * 60 * 24 * 7 }
