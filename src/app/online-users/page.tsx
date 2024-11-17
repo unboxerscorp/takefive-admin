@@ -90,8 +90,14 @@ export default function OnlineUsers() {
                                             return []
                                         }
                                         const newRows = currentUserData.map((item: Record<string, unknown>) => flattenObject({ obj: item })).map((item: Record<string, unknown> & { user_id: string }) => ({ ...item, id: +item.user_id }))
-                                        // console.log(newRows)
-                                        return newRows;
+                                        // @ts-expect-error any
+                                        return newRows.sort((a, b) => {
+                                            if (a.userStatus_sessionInfo_batchId !== b.userStatus_sessionInfo_batchId) return +a.userStatus_sessionInfo_batchId - +b.userStatus_sessionInfo_batchId;
+                                            if (a.userStatus_sessionInfo_sessionName !== b.userStatus_sessionInfo_sessionName) return a.userStatus_sessionInfo_sessionName.localeCompare(b.userStatus_sessionInfo_sessionName);
+                                            if (a.user_isAdmin !== b.user_isAdmin) return `${a.user_isAdmin}` === "true" ? 1 : -1;
+                                            if (a.userStatus_sessionStatus !== b.userStatus_sessionStatus) return a.userStatus_sessionStatus.localeCompare(b.userStatus_sessionStatus);
+                                            return a.id - b.id;
+                                        });
                                     }
                                     return rows
                                 })
@@ -140,7 +146,7 @@ export default function OnlineUsers() {
         const removedItems = prevRows.filter(item => !currentSet.has(item.id)); // 삭제된 요소들
 
         const isIncreased = addedItems.length > 0 && !addedItems.every(item => item.user_isAdmin);
-        const isDecreased = removedItems.length > 0 && !removedItems.every(item => item.isAdmin);
+        const isDecreased = removedItems.length > 0 && !removedItems.every(item => item.user_isAdmin);
 
         if (isIncreased && isDecreased) {
             addSound.play().catch(() => { });
@@ -168,12 +174,12 @@ export default function OnlineUsers() {
                                     acc[column.field] = column.width;
                                 }
                                 return acc;
-                              }, {} as Record<string, number>);
+                            }, {} as Record<string, number>);
 
-                              setColumnWidths(newColumnWidths);
+                            setColumnWidths(newColumnWidths);
                             setIsLoading(false);
                         });
-                        dataGridRef.current.sortColumn("id", "asc");
+                        dataGridRef.current.sortColumn("id", "asc", true);
                     } else {
                         setIsLoading(false);
                     }
@@ -231,14 +237,13 @@ export default function OnlineUsers() {
                         { field: "userStatus_sessionInfo_sessionInfo_timetable_startTime", headerName: "Session start at", align: "center", headerAlign: "center", valueFormatter: (value: number) => value ? new Date(value).toLocaleString("ko-KR") : "-" },
                         { field: "userStatus_sessionInfo_sessionInfo_timetable_endTime", headerName: "Session end at", align: "center", headerAlign: "center", valueFormatter: (value: number) => value ? new Date(value).toLocaleString("ko-KR") : "-" },
                         { field: "user_createdAt", headerName: "Created at", align: "center", headerAlign: "center", valueFormatter: (value: number) => value ? new Date(value).toLocaleString("ko-KR") : "-" },
-                    ].map((col) => ({ ...col, width: columnWidths[col.field] ||  1 })) as GridColDef[]}
+                    ].map((col) => ({ ...col, width: columnWidths[col.field] || 1 })) as GridColDef[]}
                     sx={{
                         border: 0
                     }}
                     loading={isLoading}
-                    sortModel={[
-                        { field: "id", sort: "asc" }
-                    ]}
+                    disableColumnSorting
+                    disableColumnMenu
                 />
             </Box>
         </Box>
