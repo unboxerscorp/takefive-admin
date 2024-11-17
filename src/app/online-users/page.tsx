@@ -3,7 +3,7 @@
 import { Context } from '@/misc/context';
 import PageTitle from '@/utils/page-title';
 import { Avatar, Box } from '@mui/material';
-import { DataGrid, GridColDef, useGridApiRef } from '@mui/x-data-grid';
+import { DataGrid, GridColDef, GridRenderCellParams, useGridApiRef } from '@mui/x-data-grid';
 import React from 'react';
 import { flushSync } from 'react-dom';
 import { io } from 'socket.io-client';
@@ -50,11 +50,11 @@ function flattenObject({ obj, result = {} }: { obj: Record<string, unknown> | ob
 export default function OnlineUsers() {
     const dataGridRef = useGridApiRef();
     const [isLoading, setIsLoading] = React.useState(false);
-    const [columns, setColumns] = React.useState<GridColDef[]>([]);
     const [rows, setRows] = React.useState<Record<string, unknown>[]>([]);
     const prevRowsRef = React.useRef(rows);
     const [socketConnected, setSocketConnected] = React.useState(false);
     const { targetServer } = React.useContext(Context);
+    const [columnWidths, setColumnWidths] = React.useState<Record<string, number>>({});
 
     React.useEffect(() => {
         const socketServerUrl = targetServer === "prod" ? "https://socket.takefive.now" : "https://dev.socket.takefive.now";
@@ -139,7 +139,7 @@ export default function OnlineUsers() {
         const addedItems = rows.filter(item => !prevSet.has(item.id));     // 새로 추가된 요소들
         const removedItems = prevRows.filter(item => !currentSet.has(item.id)); // 삭제된 요소들
 
-        const isIncreased = addedItems.length > 0 && !addedItems.every(item => item.isAdmin);
+        const isIncreased = addedItems.length > 0 && !addedItems.every(item => item.user_isAdmin);
         const isDecreased = removedItems.length > 0 && !removedItems.every(item => item.isAdmin);
 
         if (isIncreased && isDecreased) {
@@ -153,32 +153,6 @@ export default function OnlineUsers() {
         prevRowsRef.current = rows;
 
         if (rows.length > 0) {
-            if (columns.length === 0) {
-                setColumns([
-                    { field: "id", headerName: "ID", align: "center", headerAlign: "center", width: 1 },
-                    { field: "user_preference_nickname", headerName: "Name", align: "center", headerAlign: "center", width: 1 },
-                    { field: "user_isAdmin", headerName: "Admin", align: "center", headerAlign: "center", renderCell: (params) => <span style={{ backgroundColor: params.value === "false" ? "gold" : "white", padding: "0.5rem" }} >{params.value}</span>, width: 1 },
-                    { field: "userStatus_queueStatus", headerName: "Queue", align: "center", headerAlign: "center", width: 1 },
-                    { field: "userStatus_sessionStatus", headerName: "Session", align: "center", headerAlign: "center", renderCell: (params) => <span style={{ color: params.row.user_isAdmin === "false" ? params.value === "waiting" ? "red" : params.value === "idle" ? "orange" : "black" : "gray" }} >{params.value}</span>, width: 1 },
-                    {
-                        field: "user_preference_profileImage", headerName: "Profile", align: "center", headerAlign: "center", renderCell: (params) =>
-                            <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", width: "100%", height: "100%" }}>{params.value && <Avatar style={{ width: 40, height: 40 }} src={params.value} />}</Box>, width: 1
-                    },
-                    { field: "user_preference_regionCode", headerName: "Region", align: "center", headerAlign: "center", width: 1 },
-                    { field: "user_preference_languageCode", headerName: "Language", align: "center", headerAlign: "center", width: 1 },
-                    { field: "user_preference_level", headerName: "Level", align: "center", headerAlign: "center", width: 1 },
-                    { field: "user_preference_gender", headerName: "Gender", align: "center", headerAlign: "center", width: 1 },
-                    {
-                        field: "user_lastMatchedWith", headerName: "Last Match", align: "center", headerAlign: "center", valueGetter: (value) => JSON.parse(value).join(" "), renderCell: (params) => <span style={{ padding: "0.5rem" }} >[{params.value}]</span>, width: 1
-                    },
-                    { field: "userStatus_sessionInfo_batchId", headerName: "Batch", align: "center", headerAlign: "center", renderCell: (params) => <span style={{ padding: "0.5rem", backgroundColor: stringToHexColor(params.value) }} >{params.value ? params.value : "-"}</span>, width: 1 },
-                    { field: "userStatus_sessionInfo_sessionName", headerName: "Session", align: "center", headerAlign: "center", renderCell: (params) => <span style={{ padding: "0.5rem", backgroundColor: stringToHexColor(params.value) }} >{params.value ? params.value : "-"}</span>, width: 1 },
-                    { field: "userStatus_sessionInfo_sessionInfo_timetable_startTime", headerName: "Session start at", align: "center", headerAlign: "center", valueFormatter: (value) => value ? new Date(value).toLocaleString("ko-KR") : "-", width: 1 },
-                    { field: "userStatus_sessionInfo_sessionInfo_timetable_endTime", headerName: "Session end at", align: "center", headerAlign: "center", valueFormatter: (value) => value ? new Date(value).toLocaleString("ko-KR") : "-", width: 1 },
-                    { field: "user_createdAt", headerName: "Created at", align: "center", headerAlign: "center", valueFormatter: (value) => value ? new Date(value).toLocaleString("ko-KR") : "-", width: 1 },
-                ]);
-            }
-
             let outerTimeoutId: NodeJS.Timeout | null = null;
             let innerTimeoutId: NodeJS.Timeout | null = null;
 
@@ -189,6 +163,14 @@ export default function OnlineUsers() {
                             // includeHeaders: true,
                             includeOutliers: true,
                         }).finally(() => {
+                            const newColumnWidths = dataGridRef.current.getAllColumns().reduce((acc, column) => {
+                                if (column.field && column.width) {
+                                    acc[column.field] = column.width;
+                                }
+                                return acc;
+                              }, {} as Record<string, number>);
+
+                              setColumnWidths(newColumnWidths);
                             setIsLoading(false);
                         });
                         dataGridRef.current.sortColumn("id", "asc");
@@ -205,9 +187,8 @@ export default function OnlineUsers() {
 
         } else {
             setIsLoading(false);
-            setColumns([]);
         }
-    }, [rows, dataGridRef, columns.length]);
+    }, [rows, dataGridRef]);
 
     return (
         <Box sx={{ background: "white", display: "flex", flexDirection: "column", rowGap: 5 }}>
@@ -228,7 +209,29 @@ export default function OnlineUsers() {
                 <DataGrid
                     apiRef={dataGridRef}
                     rows={rows}
-                    columns={columns}
+                    columns={[
+                        { field: "id", headerName: "ID", align: "center", headerAlign: "center" },
+                        { field: "user_preference_nickname", headerName: "Name", align: "center", headerAlign: "center" },
+                        { field: "user_isAdmin", headerName: "Admin", align: "center", headerAlign: "center", renderCell: (params: GridRenderCellParams) => <span style={{ backgroundColor: params.value === "false" ? "gold" : "white", padding: "0.5rem" }} >{params.value}</span> },
+                        { field: "userStatus_queueStatus", headerName: "Queue", align: "center", headerAlign: "center" },
+                        { field: "userStatus_sessionStatus", headerName: "Session", align: "center", headerAlign: "center", renderCell: (params: GridRenderCellParams) => <span style={{ color: params.row.user_isAdmin === "false" ? params.value === "waiting" ? "red" : params.value === "idle" ? "orange" : "black" : "gray" }} >{params.value}</span> },
+                        {
+                            field: "user_preference_profileImage", headerName: "Profile", align: "center", headerAlign: "center", renderCell: (params: GridRenderCellParams) =>
+                                <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", width: "100%", height: "100%" }}>{params.value && <Avatar style={{ width: 40, height: 40 }} src={params.value} />}</Box>
+                        },
+                        { field: "user_preference_regionCode", headerName: "Region", align: "center", headerAlign: "center" },
+                        { field: "user_preference_languageCode", headerName: "Language", align: "center", headerAlign: "center" },
+                        { field: "user_preference_level", headerName: "Level", align: "center", headerAlign: "center" },
+                        { field: "user_preference_gender", headerName: "Gender", align: "center", headerAlign: "center" },
+                        {
+                            field: "user_lastMatchedWith", headerName: "Last Match", align: "center", headerAlign: "center", valueGetter: (value: never) => JSON.parse(value).join(" "), renderCell: (params: GridRenderCellParams) => <span style={{ padding: "0.5rem" }} >[{params.value}]</span>
+                        },
+                        { field: "userStatus_sessionInfo_batchId", headerName: "Batch", align: "center", headerAlign: "center", renderCell: (params: GridRenderCellParams) => <span style={{ padding: "0.5rem", backgroundColor: stringToHexColor(params.value) }} >{params.value ? params.value : "-"}</span> },
+                        { field: "userStatus_sessionInfo_sessionName", headerName: "Session", align: "center", headerAlign: "center", renderCell: (params: GridRenderCellParams) => <span style={{ padding: "0.5rem", backgroundColor: stringToHexColor(params.value) }} >{params.value ? params.value : "-"}</span> },
+                        { field: "userStatus_sessionInfo_sessionInfo_timetable_startTime", headerName: "Session start at", align: "center", headerAlign: "center", valueFormatter: (value: number) => value ? new Date(value).toLocaleString("ko-KR") : "-" },
+                        { field: "userStatus_sessionInfo_sessionInfo_timetable_endTime", headerName: "Session end at", align: "center", headerAlign: "center", valueFormatter: (value: number) => value ? new Date(value).toLocaleString("ko-KR") : "-" },
+                        { field: "user_createdAt", headerName: "Created at", align: "center", headerAlign: "center", valueFormatter: (value: number) => value ? new Date(value).toLocaleString("ko-KR") : "-" },
+                    ].map((col) => ({ ...col, width: columnWidths[col.field] ||  1 })) as GridColDef[]}
                     sx={{
                         border: 0
                     }}

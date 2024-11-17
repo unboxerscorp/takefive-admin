@@ -12,7 +12,7 @@ export const ContextWrapper = ({ children }: { children: React.ReactNode }) => {
     const [targetServer, setTargetServer] = React.useState<"prod" | "dev">("prod");
 
     return <Context.Provider value={{ targetServer }}>
-        <Box sx={{ width: '100%', height: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: '#f5f5f5' }}>
+        <Box sx={{ width: '100%', height: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: '#f5f5f5', overflow: 'auto' }}>
             <div style={{ padding: "1rem" }}>
                 <FormControl fullWidth>
                     <InputLabel id="target-select-label">Target Server</InputLabel>
