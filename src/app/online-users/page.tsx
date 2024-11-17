@@ -145,8 +145,8 @@ export default function OnlineUsers() {
         const addedItems = rows.filter(item => !prevSet.has(item.id));     // 새로 추가된 요소들
         const removedItems = prevRows.filter(item => !currentSet.has(item.id)); // 삭제된 요소들
 
-        const isIncreased = addedItems.length > 0 && !addedItems.every(item => item.user_isAdmin);
-        const isDecreased = removedItems.length > 0 && !removedItems.every(item => item.user_isAdmin);
+        const isIncreased = addedItems.length > 0 && !addedItems.every(item => item.user_isAdmin === "true");
+        const isDecreased = removedItems.length > 0 && !removedItems.every(item => item.user_isAdmin === "true");
 
         if (isIncreased && isDecreased) {
             addSound.play().catch(() => { });
